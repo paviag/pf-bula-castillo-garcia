@@ -42,7 +42,7 @@ for i in range(len_df):
     original_height, original_width = im.shape[:2]
 
     # Dimensiones objetivo
-    target_width, target_height = 320, 1280 #Para YOLO probé con esta escala, toca ver si podemos mejorar esto
+    target_width, target_height = 288, 288 #Para YOLO probé con esta escala, toca ver si podemos mejorar esto
 
     # Calcular factores de escala
     scale_x = target_width / original_width

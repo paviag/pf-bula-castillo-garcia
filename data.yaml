@@ -1,0 +1,15 @@
+names:
+- Nipple Retraction
+- Global Asymmetry
+- No Finding
+- Asymmetry
+- Skin Retraction
+- Suspicious Calcification
+- Focal Asymmetry
+- Skin Thickening
+- Mass
+- Architectural Distortion
+- Suspicious Lymph Node
+nc: 11
+train: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train
+val: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val

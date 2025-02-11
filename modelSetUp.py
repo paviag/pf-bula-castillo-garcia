@@ -71,7 +71,7 @@ for i, row in annotations.iterrows():
     split_folder = "train" if row.split == "training" else "val"
     
     # Mover imagen a la carpeta de imágenes YOLO
-    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.png") #cambie jpg a png como se manejaba desde antes las imgs
+    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.jpg") #Toca probar mantener png como son las imagenes nativas para ver si afecta en algo
     os.makedirs(os.path.dirname(img_dest_path), exist_ok=True)
     shutil.copy(row.directory_path, img_dest_path)
     
@@ -83,8 +83,8 @@ for i, row in annotations.iterrows():
 
 # Definir la configuración para YOLO
 yolo_config = {
-    "train": "dataset/images/train",  # Ruta a los datos de entrenamiento
-    "val": "dataset/images/val",      # Ruta a los datos de validación
+    "train": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train",  # Ruta a los datos de entrenamiento
+    "val": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val",      # Ruta a los datos de validación
     "nc": 11,  # Número de clases (según las 11 categorías que mencionaste)
     "names": [
         "Nipple Retraction", "Global Asymmetry", "No Finding", "Asymmetry", "Skin Retraction",
@@ -92,7 +92,6 @@ yolo_config = {
         "Architectural Distortion", "Suspicious Lymph Node"
     ]
 }
-
 # Ruta donde se guardará el archivo
 yaml_path = "pf-bula-castillo-garcia/data.yaml"
 
