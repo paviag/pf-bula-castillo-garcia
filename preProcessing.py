@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 
-images_dir = "./data/images"
+images_dir = "D:/processed_imgs"
 metadata_dir = "./data/finding_annotations.csv"
 annotations = pd.read_csv(metadata_dir)
 annotations.finding_categories = annotations.finding_categories.replace("'", '"', regex=True).apply(json.loads)
@@ -20,7 +20,7 @@ annotations["by"] = (annotations["ymax"] + annotations["ymin"]) / 2
 annotations["bh"] = annotations["ymax"] - annotations["ymin"]
 annotations["bw"] = annotations["xmax"] - annotations["xmin"]
 
-#Convertir imagenes dicom a png y redimensionar
+#redimensionar
 
 len_df = annotations.shape[0]
 resized_base_path = "./data/resized"
@@ -30,7 +30,7 @@ os.makedirs(resized_base_path, exist_ok=True)
 for i in range(len_df):
     row = annotations.iloc[i]
     
-    img_path = f'D:/processed_imgs/{row.directory_path}'
+    img_path = f'D:/processed_imgs/{row.study_id}/{row.image_id}.png'
     
     im = cv2.imread(img_path)
     
@@ -64,7 +64,7 @@ for i in range(len_df):
     annotations.at[i, "bw"] = annotations.at[i, "xmax"] - annotations.at[i, "xmin"]
 
     # Guardar la imagen redimensionada
-    new_img_path = f"{resized_base_path}/{row.directory_path}"
+    new_img_path = f"{resized_base_path}/{row.study_id}/{row.image_id}.png"
     
     os.makedirs(os.path.dirname(new_img_path), exist_ok=True)
     
@@ -73,4 +73,4 @@ for i in range(len_df):
     # Actualizar la ruta de la imagen en el DataFrame
     annotations.at[i, "directory_path"] = new_img_path
 
-annotations.to_csv("annotationsv1.csv")
+annotations.to_csv("pf-bula-castillo-garcia/annotationsv1.csv")

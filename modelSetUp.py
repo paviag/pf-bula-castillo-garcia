@@ -14,7 +14,7 @@ CLASSES = [
 # Crear un diccionario para asignar índices a cada categoría
 class_to_idx = {cls: i for i, cls in enumerate(CLASSES)}
 
-metadata_dir = "annotationsv2.csv"
+metadata_dir = "pf-bula-castillo-garcia/annotationsv2.csv"
 annotations = pd.read_csv(metadata_dir)
 
 def get_class_index(category_str):
@@ -38,7 +38,7 @@ annotations["class_id"] = annotations["finding_categories"].apply(get_class_inde
 
 
 
-yolo_labels_path = "yolo_labels"
+yolo_labels_path = "pf-bula-castillo-garcia/yolo_labels/"
 os.makedirs(yolo_labels_path, exist_ok=True)
 
 for i, row in annotations.iterrows():
@@ -65,13 +65,13 @@ for i, row in annotations.iterrows():
     with open(yolo_label_path, "w") as f:
         f.write(f"{row.class_id} {x_center} {y_center} {bbox_width} {bbox_height}\n")
 
-base_yolo_path = "dataset/"
+base_yolo_path = "pf-bula-castillo-garcia/dataset/"
 
 for i, row in annotations.iterrows():
     split_folder = "train" if row.split == "training" else "val"
     
     # Mover imagen a la carpeta de imágenes YOLO
-    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.jpg")
+    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.png") #cambie jpg a png como se manejaba desde antes las imgs
     os.makedirs(os.path.dirname(img_dest_path), exist_ok=True)
     shutil.copy(row.directory_path, img_dest_path)
     
@@ -94,7 +94,7 @@ yolo_config = {
 }
 
 # Ruta donde se guardará el archivo
-yaml_path = "data.yaml"
+yaml_path = "pf-bula-castillo-garcia/data.yaml"
 
 # Guardar el archivo YAML
 with open(yaml_path, "w") as file:
@@ -103,7 +103,7 @@ with open(yaml_path, "w") as file:
 print(f"Archivo YAML guardado en: {yaml_path}")
 
 
-dataset_path = "dataset/"
+dataset_path = "pf-bula-castillo-garcia/dataset/"
 expected_folders = ["images/train", "images/val", "labels/train", "labels/val"]
 
 for folder in expected_folders:

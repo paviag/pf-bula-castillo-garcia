@@ -3,7 +3,7 @@ import cv2
 from math import copysign, log10
 import numpy as np
 
-metadata_dir = "annotationsv1.csv"
+metadata_dir = "pf-bula-castillo-garcia/annotationsv1.csv"
 annotations = pd.read_csv(metadata_dir)
 len_df = annotations.shape[0]
 
@@ -32,4 +32,4 @@ for i in range(len_df):
     for j in range(7):
         annotations.at[i, f'HuMoment_{j}'] = huMoments[j, 0]
 
-annotations.to_csv("annotationsv2.csv")
+annotations.to_csv("pf-bula-castillo-garcia/annotationsv2.csv")
