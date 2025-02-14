@@ -6,9 +6,9 @@ import pandas as pd
 
 # Definir las clases en orden
 CLASSES = [
-    "Nipple Retraction", "Global Asymmetry", "No Finding", "Asymmetry",
+    "Nipple Retraction", "Global Asymmetry", "Asymmetry",
     "Skin Retraction", "Suspicious Calcification", "Focal Asymmetry",
-    "Skin Thickening", "Mass", "Architectural Distortion", "Suspicious Lymph Node"
+    "Skin Thickening", "Mass", "Architectural Distortion", "Suspicious Lymph Node", "No Finding",
 ]
 
 # Crear un diccionario para asignar índices a cada categoría
@@ -29,13 +29,25 @@ def get_class_index(category_str):
         except (ValueError, SyntaxError):
             return -1  # Si hay un error, devolver -1
     
-    if category_list:  # Si la lista no está vacía
+    if category_list and len(category_list) == 1:  # Si la lista no está vacía
         return class_to_idx.get(category_list[0], -1)  # Retorna índice de la clase
     return -1  # Si no tiene categoría
 
-# Aplicar la conversión
-annotations["class_id"] = annotations["finding_categories"].apply(get_class_index)
+def get_class_id(birads_string):
+    if birads_string:
+        try:
+            if (int(birads_string[-1]) >= 3):
+                return 0
+            else:
+                return 1
+        except:
+            return 1
+        
+    return 1
 
+# Aplicar la conversión
+annotations["class_id"] = annotations["finding_birads"].apply(get_class_id) #annotations["finding_categories"].apply(get_class_index)
+#annotations = annotations[annotations["class_id"].isin(range(0,10))]
 
 
 yolo_labels_path = "pf-bula-castillo-garcia/yolo_labels/"
@@ -50,15 +62,15 @@ for i, row in annotations.iterrows():
     # Normalizar coordenadas para YOLO (Algo raro en google, pruebo primero con las que ya saque como dijo
     # el profe eduardo)
 
-    x_center = row.bx
-    y_center = row.by
-    bbox_width = row.bw
-    bbox_height = row.bh
+    #x_center = row.bx
+    #y_center = row.by
+    #bbox_width = row.bw
+    #bbox_height = row.bh
     
-    #x_center = row.bx / row.width
-    #y_center = row.by / row.height
-    #bbox_width = row.bw / row.width
-    #bbox_height = row.bh / row.height
+    x_center = row.bx / 288
+    y_center = row.by / 288
+    bbox_width = row.bw / 288
+    bbox_height = row.bh / 288
 
     # Crear archivo de anotaciones YOLO
     yolo_label_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
@@ -76,21 +88,23 @@ for i, row in annotations.iterrows():
     shutil.copy(row.directory_path, img_dest_path)
     
     # Mover anotaciones a la carpeta de labels YOLO
-    label_src_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
-    label_dest_path = os.path.join(base_yolo_path, "labels", split_folder, f"{row.image_id}.txt")
-    os.makedirs(os.path.dirname(label_dest_path), exist_ok=True)
-    shutil.copy(label_src_path, label_dest_path)
+    if row.class_id != 1: #10:
+        label_src_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
+        label_dest_path = os.path.join(base_yolo_path, "labels", split_folder, f"{row.image_id}.txt")
+        os.makedirs(os.path.dirname(label_dest_path), exist_ok=True)
+        shutil.copy(label_src_path, label_dest_path)
 
 # Definir la configuración para YOLO
 yolo_config = {
     "train": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train",  # Ruta a los datos de entrenamiento
     "val": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val",      # Ruta a los datos de validación
-    "nc": 11,  # Número de clases (según las 11 categorías que mencionaste)
-    "names": [
-        "Nipple Retraction", "Global Asymmetry", "No Finding", "Asymmetry", "Skin Retraction",
-        "Suspicious Calcification", "Focal Asymmetry", "Skin Thickening", "Mass",
-        "Architectural Distortion", "Suspicious Lymph Node"
-    ]
+    "nc": 2,  # Número de clases (según las 11 categorías que mencionaste)
+    #"names": [
+    #    "Nipple Retraction", "Global Asymmetry", "Asymmetry", "Skin Retraction",
+    #    "Suspicious Calcification", "Focal Asymmetry", "Skin Thickening", "Mass",
+    #    "Architectural Distortion", "Suspicious Lymph Node",  "No Finding",
+    #]
+    "names": ["malign", "benign"]
 }
 # Ruta donde se guardará el archivo
 yaml_path = "pf-bula-castillo-garcia/data.yaml"
