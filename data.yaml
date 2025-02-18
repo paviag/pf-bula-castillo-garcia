@@ -1,6 +1,6 @@
 names:
-- malign
-- benign
+- '0'
+- '1'
 nc: 2
 train: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train
 val: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val

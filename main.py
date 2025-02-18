@@ -1,10 +1,17 @@
 import subprocess
 
-scripts = ["preProcessing.py", "huMoments.py", "modelSetUp.py", "model.py"]
+scripts = [
+    # "convertImgs.py"
+    "preProcessing.py", 
+    #"huMoments.py", 
+    "modelSetUp.py", 
+    "model.py",
+]
 
 for script in scripts:
+    sc = "pf-bula-castillo-garcia/"+script
     print(f"Executing {script}...")
-    result = subprocess.run(["python", script], capture_output=True, text=True)
+    result = subprocess.run(["python", sc], capture_output=True, text=True)
     
     print(result.stdout)
     if result.stderr:
