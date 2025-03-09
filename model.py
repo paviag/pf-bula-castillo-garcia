@@ -4,18 +4,15 @@ print(torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
 print(torch.cuda.device_count())  # Número de GPUs detectadas
 print(torch.version.cuda)  # Versión de CUDA soportada por PyTorch
 
-
-
 def main():
     model = YOLO("yolov8n.pt") # No se si este es el correcto, en este link estan todos los modelos #https://docs.ultralytics.com/models/yolo11/#supported-tasks-and-modes
-    print(model.device)
+    print("model device before", model.device)
     gpu0 = torch.device("cuda:0")
     model.to(gpu0)
-    print(model.device)
+    print("model device after", model.device)
 
     model.train(data="pf-bula-castillo-garcia\data.yaml", epochs=128, imgsz=640, device=0, workers=1) #no se si ese imgsz afecte el resultado por el resize automatico que hace
-    
-
+    #model.export()
 if __name__ == "__main__":
     main()
 

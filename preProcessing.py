@@ -51,8 +51,8 @@ for col in ['xmin', 'ymin', 'xmax', 'ymax']:
 masses_calcif = pd.DataFrame([annotations.iloc[i] for i in range(len(annotations)) if 'Mass' in annotations.iloc[i].finding_categories or 'Suspicious Calcification' in annotations.iloc[i].finding_categories])
 healthy = annotations[annotations['finding_birads'].isna()]
 
-### Adjusting to compensate for class imbalance to include 70% sick, 30% healthy
-healthy = healthy.sample(n=int(len(masses_calcif)/0.7*0.3), random_state=1)
+### Adjusting to compensate for class imbalance to include 85% sick, 15% healthy
+healthy = healthy.sample(n=int(len(masses_calcif)/0.85*0.15), random_state=1)
 
 ### Join in new dataframe
 masses_calcif['finding_categories'] = 1
@@ -66,8 +66,8 @@ for i, (train_index, test_index) in enumerate(sss.split(
     annotations.drop('finding_categories', axis=1),
     annotations.finding_categories,
     )):
-  annotations.loc[train_index].split = 'train'
-  annotations.loc[test_index].split = 'test'
+  annotations.loc[train_index, 'split'] = 'train'
+  annotations.loc[test_index, 'split'] = 'test'
 
 # Adds columns with bounding box information
 annotations["bx"] = (annotations["xmax"] + annotations["xmin"]) / 2

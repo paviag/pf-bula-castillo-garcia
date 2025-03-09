@@ -63,16 +63,22 @@ for i, row in annotations.iterrows():
     y_center = row.by / 640
     bbox_width = row.bw / 640
     bbox_height = row.bh / 640
-
+    
     # Create YOLO labels
-    yolo_label_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
-    with open(yolo_label_path, "w") as f:
-        f.write(f"{row.finding_categories} {x_center} {y_center} {bbox_width} {bbox_height}\n")
+    if row.finding_categories == 1:
+        yolo_label_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
+        with open(yolo_label_path, "w") as f:
+            f.write(f"{row.finding_categories} {x_center} {y_center} {bbox_width} {bbox_height}\n")
 
 base_yolo_path = "pf-bula-castillo-garcia/dataset/"
 
 for i, row in annotations.iterrows():
-    split_folder = "train" if row.split == "training" else "val"
+    if row.split == "training":
+        split_folder = "train"
+    elif row.finding_categories == 1:
+        split_folder = "val"
+    else:
+        split_folder = "val_neg"
     
     # Move image to YOLO images folder
     img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.jpg") #Toca probar mantener png como son las imagenes nativas para ver si afecta en algo
@@ -90,7 +96,7 @@ for i, row in annotations.iterrows():
 yolo_config = {
     "train": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train",  # Ruta a los datos de entrenamiento
     "val": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val",      # Ruta a los datos de validación
-    "nc": 2,  # Número de clases (según las 11 categorías que mencionaste)
+    "nc": 2,  
     #"names": [
     #    "Nipple Retraction", "Global Asymmetry", "Asymmetry", "Skin Retraction",
     #    "Suspicious Calcification", "Focal Asymmetry", "Skin Thickening", "Mass",
@@ -109,7 +115,7 @@ print(f"Archivo YAML guardado en: {yaml_path}")
 
 
 dataset_path = "pf-bula-castillo-garcia/dataset/"
-expected_folders = ["images/train", "images/val", "labels/train", "labels/val"]
+expected_folders = ["images/train", "images/val", "images/val_neg", "labels/train", "labels/val"]
 
 for folder in expected_folders:
     full_path = os.path.join(dataset_path, folder)
