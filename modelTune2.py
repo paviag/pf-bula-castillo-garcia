@@ -2,8 +2,17 @@ import optuna
 import os
 import subprocess
 import pandas as pd
-
 import numpy as np
+
+# Gets index of next train iteration
+global train_index 
+train_index = max(
+    list(map(
+        lambda x: int(x[5:]) if len(x) > 5 else 0,
+        list(filter(lambda x: x.startswith("train"), reversed(os.listdir("runs/detect")))),
+    ))
+) + 1
+
 
 def maximize_balanced(model_iterations):
     # Find the maximum value for each metric across all model iterations
@@ -24,6 +33,8 @@ def maximize_balanced(model_iterations):
     return best_model
 
 def objective(trial):
+    global train_index
+
     # Gets initial/suggested values for parameters
     lr0 = trial.suggest_float('learning_rate', 1e-5, 1e-1, log=True)
     batch_size = trial.suggest_categorical('batch_size', [4, 8, 16, 32])
@@ -61,14 +72,6 @@ def objective(trial):
     
     # Returns metrics
     return p, r, mAP50, mAP50_95
-
-# Gets index of next train iteration
-train_index = max(
-    list(map(
-        lambda x: int(x[5:]) if len(x) > 5 else 0,
-        list(filter(lambda x: x.startswith("train"), reversed(os.listdir("runs/detect")))),
-    ))
-) + 1
 
 # Creates optuna study
 study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
