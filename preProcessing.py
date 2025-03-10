@@ -9,7 +9,7 @@ from pydicom.pixel_data_handlers.util import apply_voi_lut
 from pydicom.filebase import DicomBytesIO
 from sklearn.model_selection import StratifiedShuffleSplit
 
-def read_xray(path_or_bytes, voi_lut = True, fix_monochrome = True):
+def read_xray(path_or_bytes, photometricInterpretation, voi_lut=True, fix_monochrome=True):
     # Based on: https://www.kaggle.com/raddar/convert-dicom-to-np-array-the-correct-way
     dicom = dcmread(path_or_bytes)
 
@@ -21,7 +21,7 @@ def read_xray(path_or_bytes, voi_lut = True, fix_monochrome = True):
         data = dicom.pixel_array
 
     # Depending on this value, X-ray may look inverted - fix that:
-    if fix_monochrome and dicom.PhotometricInterpretation == "MONOCHROME1":
+    if fix_monochrome and photometricInterpretation == "MONOCHROME1":
         data = np.amax(data) - data
 
     data = data - np.min(data)
@@ -34,18 +34,43 @@ def read_xray(path_or_bytes, voi_lut = True, fix_monochrome = True):
 
     return clahe_img
 
-def get_img_from_zip(study_id, image_id, myzip):
+def get_img_from_zip(series_id, study_id, image_id, myzip):
+    photometricInterpretation = metadata[
+        metadata['Series Instance UID'] == series_id
+        ].iloc[0]['Photometric Interpretation']
+
     with myzip.open(f"{dicom_dir[3:-4]}/images/{study_id}/{image_id}.dicom") as myfile:
-        return read_xray(DicomBytesIO(myfile.read()))
+        return read_xray(DicomBytesIO(myfile.read()), photometricInterpretation)
 
 dicom_dir = "D:/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0.zip"
-metadata_dir = "./data/finding_annotations.csv"
-annotations = pd.read_csv(metadata_dir)
+annot_dir = "./data/finding_annotations.csv"
+metadata_dir = "./data/metadata.csv"
+
+metadata = pd.read_csv(metadata_dir)
+annotations = pd.read_csv(annot_dir)
 annotations.finding_categories = annotations.finding_categories.replace("'", '"', regex=True).apply(json.loads)
 
 # Sets negative coords to 0
 for col in ['xmin', 'ymin', 'xmax', 'ymax']:
   annotations[col] = annotations[col].apply(lambda x: 0 if x < 0 else x)
+
+# Turns multiple annotations for a single image into one
+new_annotations = pd.DataFrame(columns=annotations.columns)
+for image_id in annotations.image_id.unique():
+  # Get all box annotations for the image
+  box_mult = annotations[annotations.image_id == image_id][['xmax', 'xmin', 'ymax', 'ymin']]
+
+  # Join into a single box for a new row that will replace all old ones
+  # Copy old row
+  new_row = annotations[annotations.image_id == image_id].iloc[0].copy() 
+  # Replace box annotations to make a single box
+  new_row['xmax'] = max(box_mult.xmax)
+  new_row['xmin'] = min(box_mult.xmin)
+  new_row['ymax'] = max(box_mult.ymax)
+  new_row['ymin'] = min(box_mult.ymin)
+  
+  new_annotations = pd.concat([new_annotations, pd.DataFrame([new_row])], ignore_index=True)
+annotations = new_annotations
 
 ### Filtering malign / benign
 masses_calcif = pd.DataFrame([annotations.iloc[i] for i in range(len(annotations)) if 'Mass' in annotations.iloc[i].finding_categories or 'Suspicious Calcification' in annotations.iloc[i].finding_categories])
@@ -55,8 +80,8 @@ healthy = annotations[annotations['finding_birads'].isna()]
 healthy = healthy.sample(n=int(len(masses_calcif)/0.85*0.15), random_state=1)
 
 ### Join in new dataframe
-masses_calcif['finding_categories'] = 1
-healthy['finding_categories'] = 0
+masses_calcif['finding_categories'] = 0
+healthy['finding_categories'] = 1
 annotations = pd.concat([masses_calcif, healthy], ignore_index=True)
 
 ## Sort train/test indices with an 80/20 split
@@ -83,7 +108,7 @@ with zipfile.ZipFile(dicom_dir) as myzip:
     for i in range(annotations.shape[0]):
         row = annotations.iloc[i]
         
-        im = get_img_from_zip(row.study_id, row.image_id, myzip)
+        im = get_img_from_zip(row.series_id, row.study_id, row.image_id, myzip)
         
         # Gets original image dimensions
         original_height, original_width = im.shape[:2]

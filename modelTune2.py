@@ -13,32 +13,19 @@ train_index = max(
     ))
 ) + 1
 
-
-def maximize_balanced(model_iterations):
-    # Find the maximum value for each metric across all model iterations
-    max_values = [max(model_iterations[j][i] for j in range(len(model_iterations))) for i in range(4)]
-    
-    # For each model iteration, calculate the "balance score"
-    best_model = None
-    best_balance_score = float('-inf')
-    for mi in model_iterations:
-        # Calculate the sum of differences from the max values to determine how close the list of metrics is
-        differences = [abs(i - v) for i, v in zip(mi, max_values)]
-        balance_score = -sum(differences)  # Negate the sum of differences (higher = better balance)
-        
-        if balance_score > best_balance_score:
-            best_balance_score = balance_score
-            best_model = mi
-    
-    return best_model
-
 def objective(trial):
     global train_index
 
     # Gets initial/suggested values for parameters
-    lr0 = trial.suggest_float('learning_rate', 1e-5, 1e-1, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [4, 8, 16, 32])
-    weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
+    lr0 = trial.suggest_float("lr0", 1e-5, 1e-1, log=True)
+    lrf = trial.suggest_float("lrf", 0.01, 1.0)
+    momentum = trial.suggest_float("momentum", 0.6, 0.98)
+    weight_decay = trial.suggest_float("weight_decay", 0.0, 0.001)
+    warmup_epochs = trial.suggest_float("warmup_epochs", 0.0, 5.0)
+    warmup_momentum = trial.suggest_float("warmup_momentum", 0.0, 0.95)
+    box = trial.suggest_float("box", 0.02, 0.2)
+    cls = trial.suggest_float("cls", 0.2, 4.0)
+    batch = trial.suggest_categorical('batch_size', [4, 8, 16, 32])
     
     # Runs train command for YOLO model with generated parameters
     train_command = [
@@ -46,9 +33,14 @@ def objective(trial):
         "data=pf-bula-castillo-garcia/data.yaml",
         "optimizer=AdamW",
         f"lr0={lr0}",
-        #f"patience={patience}",
-        f"batch={batch_size}",
+        f"lrf={lrf}",
+        f"momentum={momentum}",
         f"weight_decay={weight_decay}",
+        f"warmup_epochs={warmup_epochs}",
+        f"warmup_momentum={warmup_momentum}",
+        f"box={box}",
+        f"cls={cls}",
+        f"batch={batch}",
         "model=yolov8n.pt",
         "epochs=10", 
         "imgsz=640",

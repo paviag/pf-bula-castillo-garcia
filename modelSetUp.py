@@ -58,62 +58,68 @@ for i, row in annotations.iterrows():
     if row.class_id == -1:
         continue
     """
-    
+    # Reajust box annotations to YOLO format
     x_center = row.bx / 640
     y_center = row.by / 640
     bbox_width = row.bw / 640
     bbox_height = row.bh / 640
     
     # Create YOLO labels
-    if row.finding_categories == 1:
+    if row.finding_categories == 0:
         yolo_label_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
         with open(yolo_label_path, "w") as f:
             f.write(f"{row.finding_categories} {x_center} {y_center} {bbox_width} {bbox_height}\n")
+    else:
+        yolo_label_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
+        with open(yolo_label_path, "w") as f:
+            f.write("")
 
 base_yolo_path = "pf-bula-castillo-garcia/dataset/"
 
 for i, row in annotations.iterrows():
-    if row.split == "training":
+    # Images for training are saved into train folder
+    # Images for validation are split into the val folder for YOLO validation with labeled images
+    # and the val_neg folder for manual validation with unlabeled images
+    if row.split == "train":
         split_folder = "train"
-    elif row.finding_categories == 1:
+    elif row.finding_categories == 0:
         split_folder = "val"
     else:
         split_folder = "val_neg"
     
-    # Move image to YOLO images folder
-    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.jpg") #Toca probar mantener png como son las imagenes nativas para ver si afecta en algo
+    # Move image to respective images folder
+    img_dest_path = os.path.join(base_yolo_path, "images", split_folder, f"{row.image_id}.jpg") 
     os.makedirs(os.path.dirname(img_dest_path), exist_ok=True)
     shutil.copy(row.directory_path, img_dest_path)
     
     # Move annotations to YOLO labels folder
-    if row.finding_categories == 1:
-        label_src_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
-        label_dest_path = os.path.join(base_yolo_path, "labels", split_folder, f"{row.image_id}.txt")
-        os.makedirs(os.path.dirname(label_dest_path), exist_ok=True)
-        shutil.copy(label_src_path, label_dest_path)
+    label_src_path = os.path.join(yolo_labels_path, f"{row.image_id}.txt")
+    label_dest_path = os.path.join(base_yolo_path, "labels", split_folder, f"{row.image_id}.txt")
+    os.makedirs(os.path.dirname(label_dest_path), exist_ok=True)
+    shutil.copy(label_src_path, label_dest_path)
 
 # Define YOLO configuration
 yolo_config = {
-    "train": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train",  # Ruta a los datos de entrenamiento
-    "val": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val",      # Ruta a los datos de validación
-    "nc": 2,  
+    "train": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train",  # Path to train data for training
+    "val": "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val",      # Path to val data for training
+    "nc": 1,#2,  # Number of classes to detect anomalies for (masses & calcifications are merged into one class)
     #"names": [
     #    "Nipple Retraction", "Global Asymmetry", "Asymmetry", "Skin Retraction",
     #    "Suspicious Calcification", "Focal Asymmetry", "Skin Thickening", "Mass",
     #    "Architectural Distortion", "Suspicious Lymph Node",  "No Finding",
     #]
-    "names": ["0", "1"],
+    "names": ["0"], # Numbered class names must start with 0
 }
-# Ruta donde se guardará el archivo
+# Path to YAML model config file
 yaml_path = "pf-bula-castillo-garcia/data.yaml"
 
-# Guardar el archivo YAML
+# Save YAML file
 with open(yaml_path, "w") as file:
     yaml.dump(yolo_config, file, default_flow_style=False)
 
 print(f"Archivo YAML guardado en: {yaml_path}")
 
-
+# Confirm folder creation
 dataset_path = "pf-bula-castillo-garcia/dataset/"
 expected_folders = ["images/train", "images/val", "images/val_neg", "labels/train", "labels/val"]
 
