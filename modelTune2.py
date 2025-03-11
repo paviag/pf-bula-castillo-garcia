@@ -9,7 +9,7 @@ global train_index
 train_index = max(
     list(map(
         lambda x: int(x[5:]) if len(x) > 5 else 0,
-        list(filter(lambda x: x.startswith("train"), reversed(os.listdir("runs/detect")))),
+        list(filter(lambda x: x.startswith("train"), os.listdir("runs/detect"))),
     ))
 ) + 1
 

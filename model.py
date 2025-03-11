@@ -37,7 +37,6 @@ def main():
     model.to(gpu0)
     print("model device after", model.device)
     best_hyperparams = get_best_hyperparams()
-    print(best_hyperparams)
 
     model.train(
         data="pf-bula-castillo-garcia\data.yaml", 
