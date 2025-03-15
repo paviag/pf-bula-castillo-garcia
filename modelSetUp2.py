@@ -3,7 +3,7 @@ import yaml
 import os
 import pandas as pd
 
-annotations_dir = "pf-bula-castillo-garcia/annotationsv1.csv"
+annotations_dir = "pf-bula-castillo-garcia/annotationsv2.csv"
 annotations = pd.read_csv(annotations_dir)
 
 yolo_labels_path = "pf-bula-castillo-garcia/yolo_labels/"

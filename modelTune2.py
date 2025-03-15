@@ -2,7 +2,7 @@ import optuna
 import os
 import subprocess
 import pandas as pd
-import numpy as np
+from utils import get_best_iteration
 
 # Gets index of next train iteration
 global train_index 
@@ -41,6 +41,7 @@ def objective(trial):
         f"box={box}",
         f"cls={cls}",
         f"batch={batch}",
+        "patience=10",
         "model=yolov8n.pt",
         "epochs=10", 
         "imgsz=640",
@@ -50,7 +51,8 @@ def objective(trial):
 
     subprocess.run(train_command)
     
-    # Obtains metrics of current run 
+    # Obtains best metrics of current run 
+    """
     results = pd.read_csv(f"runs/detect/train{train_index}/results.csv")
     p, r, mAP50, mAP50_95 = results[
         ['metrics/precision(B)', 
@@ -58,12 +60,24 @@ def objective(trial):
          'metrics/mAP50(B)', 
          'metrics/mAP50-95(B)']
          ].iloc[-1].values
+    """
+    metric_names = [
+        'metrics/precision(B)', 
+        'metrics/recall(B)', 
+        'metrics/mAP50(B)', 
+        'metrics/mAP50-95(B)',
+    ]
+    best_metrics = get_best_iteration(
+        f"runs/detect/train{train_index}/results.csv",
+        metrics_names=metric_names,
+        return_metrics=True,
+        )
     
     # Increases train_index for next iteration
     train_index += 1
     
     # Returns metrics
-    return p, r, mAP50, mAP50_95
+    return list(map(lambda x: float(best_metrics[x]), metric_names))
 
 # Creates optuna study
 study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
@@ -72,9 +86,15 @@ study.optimize(objective, n_trials=50)
 # DataFrame for best trials in study
 best_trials = pd.DataFrame(columns=[
     "number", 
-    "learning_rate", 
-    "batch_size",
-    "weight_decay",
+    "lr0",  
+    "lrf",  
+    "momentum",  
+    "weight_decay",  
+    "warmup_epochs",  
+    "warmup_momentum",  
+    "box",  
+    "cls",  
+    "batch",  
     "precision",
     "recall",
     "mAP50", 

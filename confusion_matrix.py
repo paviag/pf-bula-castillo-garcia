@@ -3,7 +3,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import numpy as np
 import matplotlib.pyplot as plt
 
-model_path = "runs/detect/train121/weights/best.pt"
+model_path = "runs/detect/train233/weights/best.pt"
 test_path = "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images"
 
 model = YOLO(model_path)

@@ -56,9 +56,11 @@ def reproportion_class_distribution(annotations):
     # Filtering positive/negative cases
     pos = pd.DataFrame([
         annotations.iloc[i] for i in range(len(annotations)) 
-        if 'Mass' in annotations.iloc[i].finding_categories 
+        if ('Mass' in annotations.iloc[i].finding_categories 
         or 'Suspicious Calcification' in annotations.iloc[i].finding_categories
-        or 'Suspicious Lymph Node' in annotations.iloc[i].finding_categories])
+        or 'Suspicious Lymph Node' in annotations.iloc[i].finding_categories)
+        and not pd.isna(annotations.iloc[i].finding_birads)])
+    
     neg = annotations[
         (annotations['finding_birads'].isna())
         & (~annotations['image_id'].isin(pos.image_id.unique()))
@@ -66,6 +68,9 @@ def reproportion_class_distribution(annotations):
     
     if any(ipos in neg.image_id.unique() for ipos in pos.image_id.unique()):
         raise Exception("Overlapping pos and neg")
+    
+    if not neg.finding_birads.isna().values.any():
+        raise Exception("Negative findings contain a positive")
     
     # Adjusting to compensate for class imbalance to include 85% pos, 15% neg
     neg = neg.sample(n=int(len(pos)/0.85*0.15), random_state=1)
@@ -117,9 +122,9 @@ def format_annotations(annotations):
     """
     # Parses finding_categories strings to lists
     annotations.finding_categories = annotations.finding_categories.replace("'", '"', regex=True).apply(json.loads)
-    # Sets negative coords to 0
-    for col in ['xmin', 'ymin', 'xmax', 'ymax']:
-        annotations[col] = annotations[col].apply(lambda x: 0 if x < 0 else x)
+    # Sets negative coords to 0 and coords outside image to max width/height
+    annotations[['xmin', 'xmax']] = annotations[['xmin', 'xmax']].apply(lambda x: x.clip(upper=annotations['width'], lower=0), axis=0)  
+    annotations[['ymin', 'ymax']] = annotations[['ymin', 'ymax']].apply(lambda x: x.clip(upper=annotations['height'], lower=0), axis=0)
     # Reproportions class distribution
     annotations = reproportion_class_distribution(annotations)
     # Sets train/test split indices
@@ -161,7 +166,7 @@ with zipfile.ZipFile(dicom_dir) as myzip:
         im_resized = cv2.resize(im, (target_width, target_height))
     
         # Saves resized image
-        new_img_path = f"{processed_base_path}/{first.study_id.item()}/{first.image_id.item()}.png"
+        new_img_path = f"{processed_base_path}/{first.study_id.item()}/{first.image_id.item()}.jpg"
         os.makedirs(os.path.dirname(new_img_path), exist_ok=True)
         cv2.imwrite(new_img_path, im_resized)
     
@@ -172,13 +177,13 @@ with zipfile.ZipFile(dicom_dir) as myzip:
             annotations.at[i, "ymin"] = row.ymin = row.ymin * scale_y
             annotations.at[i, "ymax"] = row.ymax = row.ymax * scale_y
 
-            annotations.at[i, "bx"] = (row.xmax + row.xmin) / (2*640)
-            annotations.at[i, "by"] = (row.ymax + row.ymin) / (2*640)
-            annotations.at[i, "bh"] = (row.ymax - row.ymin) / 640
-            annotations.at[i, "bw"] = (row.xmax - row.xmin) / 640
+            annotations.at[i, "bx"] = (row.xmax + row.xmin) / (2*target_width)
+            annotations.at[i, "by"] = (row.ymax + row.ymin) / (2*target_height)
+            annotations.at[i, "bh"] = (row.ymax - row.ymin) / target_height
+            annotations.at[i, "bw"] = (row.xmax - row.xmin) / target_width
     
             # Updates image path on Dataframe
             annotations.at[i, "directory_path"] = new_img_path
 
 # Saves annotations as csv
-annotations.to_csv("pf-bula-castillo-garcia/annotationsv1.csv")
+annotations.to_csv("pf-bula-castillo-garcia/annotationsv1.csv", index=False)
