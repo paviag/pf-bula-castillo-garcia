@@ -1,13 +1,13 @@
 from config import config
 from ultralytics import YOLO
 import torch
-from src.extra.utils import get_best_iteration
-print(torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
-print(torch.cuda.device_count())  # Número de GPUs detectadas
-print(torch.version.cuda)  # Versión de CUDA soportada por PyTorch
+from extra.utils import get_best_iteration
+print("CUDA is available:", torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
+print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
+print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
 
 
-def run_model(best_trials_path=config.best_trials_path):
+def run_model(best_trials_path=config.best_trials_path, epochs=128):
     # Get available device
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
@@ -25,7 +25,7 @@ def run_model(best_trials_path=config.best_trials_path):
 
     # Train model
     model.train(
-        data="pf-bula-castillo-garcia\data.yaml",
+        data=config.yolo_config_path,
         optimizer="AdamW",
         lr0=best_hyperparams["lr0"],
         lrf=best_hyperparams["lrf"],
@@ -36,9 +36,8 @@ def run_model(best_trials_path=config.best_trials_path):
         box=best_hyperparams["box"],
         cls=best_hyperparams["cls"],
         batch=int(best_hyperparams["batch"]),
-        epochs=128,
+        epochs=epochs,
         imgsz=640,
         device=0,
         workers=1,
-        patience=10,
     )

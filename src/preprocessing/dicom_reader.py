@@ -8,7 +8,7 @@ class DicomProcessor:
         self.voi_lut = voi_lut
         self.clahe = cv2.createCLAHE(clipLimit=clahe_clip, tileGridSize=clahe_grid)
 
-    def read_xray(self, dicom_path, photometric_interpretation):
+    def process(self, dicom_path, photometric_interpretation):
         """
         Returns processed image from dicom path.
         Fixes monochrome and applies CLAHE filter for segmentation.

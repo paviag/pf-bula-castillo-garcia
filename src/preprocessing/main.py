@@ -1,12 +1,12 @@
-from dicom_reader import DicomProcessor
+from preprocessing.dicom_reader import DicomProcessor
 from preprocessing.annotation_processor import ProcessedAnnotation
-from image_handler import ImageDatasetHandler
+from preprocessing.image_handler import ImageDatasetHandler
 from config import config
 
 
 def run_preprocessing():
     dicom_zip = config.dicom_zip
-    annotations_path = f"{config.input_data_path}/annotations.csv"
+    annotations_path = f"{config.input_data_path}/finding_annotations.csv"
     metadata_path = f"{config.input_data_path}/metadata.csv"
     output_image_dir = config.output_image_path
     output_data_dir = config.output_data_path
@@ -16,7 +16,7 @@ def run_preprocessing():
     image_handler = ImageDatasetHandler(
         dicom_zip, metadata_path, output_image_dir)
     # default test size 0.2 and target size 640x640
-    annotations = ProcessedAnnotation(annotations_path)
+    annotations = ProcessedAnnotation(annotations_path, output_image_dir).annotations
 
     for im_id, rows in annotations.groupby('image_id'):
         first = rows.iloc[0]

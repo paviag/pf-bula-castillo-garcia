@@ -17,8 +17,8 @@ class ImageDatasetHandler:
         """Returns an image of a processed dicom file"""
         photometric_interpretation = self.metadata[self.metadata['Series Instance UID']
                                                    == series_id].iloc[0]['Photometric Interpretation']
-        with zipfile.ZipFile(self.dicom_zip) as myzip:
-            with myzip.open(f"images/{study_id}/{image_id}.dicom") as myfile:
+        with zipfile.ZipFile(f"{self.dicom_zip}.zip") as myzip:
+            with myzip.open(f"{self.dicom_zip.split('/')[-1]}/images/{study_id}/{image_id}.dicom") as myfile:
                 return processor.process(DicomBytesIO(myfile.read()), photometric_interpretation)
 
     def resize(self, image):

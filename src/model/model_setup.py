@@ -8,8 +8,8 @@ from config import config
 class YOLOLabelGenerator:
     """Generates YOLO labels from annotations"""
 
-    def __init__(self, annotations, output_dir):
-        self.annotations = annotations
+    def __init__(self, annotations_df, output_dir):
+        self.annotations = annotations_df
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -28,8 +28,8 @@ class YOLOLabelGenerator:
 class DatasetOrganizer:
     """Organizes images and labels in folders structured for YOLO models"""
 
-    def __init__(self, annotations_file, base_yolo_path, label_dir):
-        self.annotations = pd.read_csv(annotations_file)
+    def __init__(self, annotations_df, base_yolo_path, label_dir):
+        self.annotations = annotations_df
         self.base_yolo_path = base_yolo_path
         self.label_dir = label_dir
         os.makedirs(self.base_yolo_path, exist_ok=True)
@@ -93,7 +93,7 @@ class FolderValidator:
 
 
 def run_model_setup():
-    annotations_file = f"{config.output_data_path}/annotations.csv"
+    annotations_file = pd.read_csv(f"{config.output_data_path}/annotations.csv")
     yolo_labels_path = config.yolo_labels_path
     yolo_dataset_path = config.yolo_dataset_path
     yaml_path = config.yolo_config_path
@@ -109,7 +109,12 @@ def run_model_setup():
     dataset_organizer.move_files()
     # Make YOLO model config file
     yolo_config = YOLOConfigGenerator(
-        yaml_path, yolo_dataset_path + "images/train", yolo_dataset_path + "images/val", 1, ["0"])
+        yaml_path, 
+        f"{yolo_dataset_path}/images/train", 
+        f"{yolo_dataset_path}/images/val", 
+        1, 
+        ["0"],
+    )
     yolo_config.save_config()
     # Check expected folders were created
     folder_validator = FolderValidator(yolo_dataset_path, expected_folders)

@@ -2,31 +2,38 @@ from ultralytics import YOLO
 from sklearn.metrics import ConfusionMatrixDisplay
 import numpy as np
 import matplotlib.pyplot as plt
+from config import config
 
-model_path = "runs/detect/train233/weights/best.pt"
-test_path = "C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images"
 
-model = YOLO(model_path)
+def confusion_matrix(model, test_images_path, save_path):
+    """
+    Saves and displays fig of confusion matrix image of model from train_index.
 
-#print(model.val(save_json=True))
+    The matrix is built from predictions on model's pre-established
+    validation data.
+    """
+    neg_results = model.predict(f"{test_images_path}/val_neg")  # Predictions for neg cases
+    pos_results = model.predict(f"{test_images_path}/val")      # Predictions for pos cases
 
-neg_results = model.predict(test_path+"/val_neg")
-pos_results = model.predict(test_path+"/val")
-for r in pos_results:
-    if len(r.boxes.cls.unique()) > 1:
-        print(Exception(r.boxes.cls))
-
-ytrue = np.concatenate([
-    np.ones(len(neg_results)),
-    np.zeros(len(pos_results)),
-])
-ypred = np.array([
-    0 if len(r.boxes.cls.unique()) > 0 else 1 
-    for r in neg_results+pos_results
+    ytrue = np.concatenate([    # Array for true class values
+        np.ones(len(neg_results)),  # neg cases should be 1
+        np.zeros(len(pos_results)), # pos cases should be 0
     ])
+    # If there is more than one kind of predicted classes for a case, that case is pos
+    # If there are none, that case is neg
+    # This happens because the model is only aware of one class: pos (1)
+    ypred = np.array([          # Array for predicted classes
+        0 if len(r.boxes.cls.unique()) > 0 else 1 
+        for r in neg_results+pos_results
+        ])
 
-ConfusionMatrixDisplay.from_predictions(ytrue, ypred, cmap='Blues', display_labels=["positive (0)", "negative (1)"])
+    # Generate the confusion matrix
+    ConfusionMatrixDisplay.from_predictions(
+        ytrue, ypred, cmap='Blues', display_labels=["positive (0)", "negative (1)"]
+    )
 
-plt.show()
-#results = model("pf-bula-castillo-garcia/dataset/images/val/0af3e36d8d050e92149a6b79e4181db4.jpg")
-#results.show()
+    # Save the image to output path
+    plt.savefig(save_path)
+
+    # Display
+    plt.show()

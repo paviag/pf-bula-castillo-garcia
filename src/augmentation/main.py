@@ -1,5 +1,5 @@
-from image_augmentation import ImageAugmentor
-from annotation_handler import AnnotationHandler
+from augmentation.image_augmentation import ImageAugmentor
+from augmentation.annotation_handler import AnnotationHandler
 from config import config
 
 def run_augmentations():

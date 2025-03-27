@@ -1,10 +1,11 @@
 import os
+from config import config
 
 
 class TrainIndexManager:
     """Manages the training index for YOLO runs"""
 
-    def __init__(self, runs_base_path):
+    def __init__(self, runs_base_path=config.runs_path):
         # Sets starting index of Optuna study as index of next YOLO run
         self.index = self._get_next_index(runs_base_path)
 

@@ -3,34 +3,35 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class ProcessedAnnotation:
-    def __init__(self, annotations, test_size=0.2, target_size=(640, 640)):
+    def __init__(self, annotations, output_image_dir, test_size=0.2, target_size=(640, 640)):
         self.annotations = pd.read_csv(annotations)
         self.test_size = test_size
         self.target_width, self.target_height = target_size
 
-        self.fix_invalid_boxes()
-        self.reproportion_class_distribution()
-        self.set_splits()
-        self.scale_bounding_boxes()
+        self._fix_invalid_boxes()
+        self._reproportion_class_distribution()
+        self._set_splits()
+        self._scale_bounding_boxes()
+        self._add_yolo_label_cols()
 
-    def reproportion_class_distribution(self, neg_size=0.15):
+    def _reproportion_class_distribution(self, neg_size=0.15):
         """Returns reproportioned annotations with adjusted positive/negative distribution"""
         # Filtering positive/negative cases
         pos = self.annotations[self.annotations.finding_categories.apply(lambda x: any(
             c in x for c in ["Mass", "Suspicious Calcification", "Suspicious Lymph Node"]))]
-        pos.dropna(subset=['finding_birads'])
+        pos.dropna(subset=['finding_birads', 'xmin'])
         neg = self.annotations[(self.annotations['finding_birads'].isna()) & (
             ~self.annotations['image_id'].isin(pos.image_id))]
 
         # Adjusting to compensate for class imbalance to include input neg_size
         neg = neg.sample(n=int(len(pos) / (1-neg_size)
                          * neg_size), random_state=1)
-        pos['finding_categories'] = 0
-        neg['finding_categories'] = 1
+        pos.loc[:, 'finding_categories'] = 0
+        neg.loc[:, 'finding_categories'] = 1
 
         self.annotations = pd.concat([pos, neg], ignore_index=True)
 
-    def set_splits(self):
+    def _set_splits(self):
         """Returns annotations with set splits for stratified train/test split"""
         sss = StratifiedShuffleSplit(
             n_splits=1, test_size=self.test_size, random_state=0)
@@ -78,7 +79,7 @@ class ProcessedAnnotation:
                 [i for j in imid_indexes[im_id].values.tolist() for i in j], 
                 'split'] = 'val'"""
 
-    def scale_bounding_boxes(self):
+    def _scale_bounding_boxes(self):
         """Scales annotations' bounding boxes to target dimensions"""
         for col in ['xmin', 'xmax']:
             self.annotations[col] *= self.target_width / self.annotations.width
@@ -86,9 +87,16 @@ class ProcessedAnnotation:
             self.annotations[col] *= self.target_height / \
                 self.annotations.height
 
-    def fix_invalid_boxes(self):
+    def _fix_invalid_boxes(self):
         """Clips box coordinates between 0 and width (x-coordinates) or height (y-coordinates)"""
         self.annotations[['xmin', 'xmax']] = self.annotations[['xmin', 'xmax']].apply(
             lambda x: x.clip(upper=self.annotations['width'], lower=0), axis=0)
         self.annotations[['ymin', 'ymax']] = self.annotations[['ymin', 'ymax']].apply(
             lambda x: x.clip(upper=self.annotations['height'], lower=0), axis=0)
+
+    def _add_yolo_label_cols(self):
+        """Adds columns of yolo label fields for bounding boxes"""
+        self.annotations.loc[:, "bx"] = (self.annotations["xmax"] + self.annotations["xmin"]) / (2 * self.annotations["width"])
+        self.annotations.loc[:, "by"] = (self.annotations["ymax"] + self.annotations["ymin"]) / (2 * self.annotations["height"])
+        self.annotations.loc[:, "bh"] = (self.annotations["ymax"] - self.annotations["ymin"]) / self.annotations["height"]
+        self.annotations.loc[:, "bw"] = (self.annotations["xmax"] - self.annotations["xmin"]) / self.annotations["width"]

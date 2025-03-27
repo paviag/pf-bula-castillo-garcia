@@ -1,5 +1,5 @@
 import subprocess
-from src.extra.utils import get_best_iteration
+from extra.utils import get_best_iteration
 
 
 class YOLOTrainer:
@@ -21,7 +21,6 @@ class YOLOTrainer:
             "yolo", "train",
             f"data={self.config_path}",
             "optimizer=AdamW",
-            "patience=10",
             "model=yolov8n.pt",
             f"epochs={self.trial_epochs}",
             "imgsz=640",
