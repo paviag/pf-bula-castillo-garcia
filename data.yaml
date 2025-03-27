@@ -1,5 +1,5 @@
 names:
 - '0'
 nc: 1
-train: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/train
-val: C:/Users/Lab6k/Documents/PF/pf-bula-castillo-garcia/dataset/images/val
+train: dataset/images/train
+val: dataset/images/val

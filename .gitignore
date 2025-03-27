@@ -1,3 +1,9 @@
 /dataset/
 
 /yolo_labels/
+
+/output/images/
+
+__pycache__
+
+/runs
