@@ -5,9 +5,13 @@ import optuna
 class OptunaStudyManager:
     """Manages the Optuna study and stores best trials"""
 
-    def __init__(self, trainer):
+    def __init__(self, trainer, sqlite_file):
         self.trainer = trainer
-        self.study = optuna.create_study(directions=4*['maximize'])
+        self.study = optuna.create_study(
+            directions=4*['maximize'], 
+            storage=optuna.storages.SQLiteStorage(sqlite_file),
+            load_if_exists=True,
+        )
 
     def run_optimization(self, n_trials=50):
         """Optimizes study for an input number of trials with trainer"""

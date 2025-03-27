@@ -5,7 +5,7 @@ from model.model_setup import run_model_setup
 from tuning.main import run_tuning
 from tuning.train_index import TrainIndexManager
 from model.model import run_model
-# from evaluation.main import run_evaluation
+from evaluation.main import run_evaluation
 
 
 def main(run_tuning=False, omit_setup=True):
@@ -24,7 +24,7 @@ def main(run_tuning=False, omit_setup=True):
     print("Running model training...")
     run_model()  # Model
     print("Running model evaluation...")
-    #run_evaluation(train_index)  # Evaluation
+    run_evaluation(train_index)  # Evaluation
 
 
 if __name__ == "__main__":
