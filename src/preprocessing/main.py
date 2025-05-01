@@ -16,7 +16,7 @@ def run_preprocessing():
     image_handler = ImageDatasetHandler(
         dicom_zip, metadata_path, output_image_dir)
     # default test size 0.2 and target size 640x640
-    annotations = ProcessedAnnotation(annotations_path, output_image_dir).annotations
+    annotations = ProcessedAnnotation(annotations_path).annotations
 
     for im_id, rows in annotations.groupby('image_id'):
         first = rows.iloc[0]
@@ -34,3 +34,4 @@ def run_preprocessing():
 
     # Saves annotations as csv
     annotations.to_csv(output_data_dir+"/annotations.csv", index=False)
+    annotations.to_csv(output_data_dir+"/annotations_processed.csv", index=False)

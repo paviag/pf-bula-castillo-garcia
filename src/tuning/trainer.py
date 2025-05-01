@@ -5,7 +5,7 @@ from extra.utils import get_best_iteration
 class YOLOTrainer:
     """Handles the training process of the YOLO model using Optuna-generated parameters"""
 
-    def __init__(self, config_path, runs_path, train_index_manager, trial_epochs=10):
+    def __init__(self, *, config_path, runs_path, train_index_manager, trial_epochs=10):
         self.train_index_manager = train_index_manager
         self.params = ["lr0", "lrf", "momentum", "weight_decay",
                        "warmup_epochs", "warmup_momentum", "box", "cls", "batch"]
@@ -17,6 +17,7 @@ class YOLOTrainer:
         """Trains model for a trial and returns best metrics"""
         train_index = self.train_index_manager.get_index()
         params = self._get_trial_params(trial)
+        
         subprocess.run([
             "yolo", "train",
             f"data={self.config_path}",
@@ -28,7 +29,7 @@ class YOLOTrainer:
             "workers=1"] + [
             f"{p}={params[p]}" for p in self.params
         ])
-
+        
         best_metrics = get_best_iteration(
             f"{self.runs_path}/train{train_index}/results.csv",
             metrics_names=[
@@ -39,8 +40,8 @@ class YOLOTrainer:
             ],
             return_metrics=True,
         )
-
-        return best_metrics
+        
+        return list(best_metrics.values())
 
     def _get_trial_params(self, trial):
         """Gets Optuna suggested params for input trial"""

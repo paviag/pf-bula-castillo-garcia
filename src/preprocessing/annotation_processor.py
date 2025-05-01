@@ -3,14 +3,14 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class ProcessedAnnotation:
-    def __init__(self, annotations, output_image_dir, test_size=0.2, target_size=(640, 640)):
+    def __init__(self, annotations, test_size=0.2, target_size=(640, 640)):
         self.annotations = pd.read_csv(annotations)
         self.test_size = test_size
         self.target_width, self.target_height = target_size
 
-        self._fix_invalid_boxes()
         self._reproportion_class_distribution()
         self._set_splits()
+        self._fix_invalid_boxes()
         self._scale_bounding_boxes()
         self._add_yolo_label_cols()
 
@@ -19,13 +19,13 @@ class ProcessedAnnotation:
         # Filtering positive/negative cases
         pos = self.annotations[self.annotations.finding_categories.apply(lambda x: any(
             c in x for c in ["Mass", "Suspicious Calcification", "Suspicious Lymph Node"]))]
-        pos.dropna(subset=['finding_birads', 'xmin'])
+        pos = pos.dropna(subset=['finding_birads', 'xmin'])
         neg = self.annotations[(self.annotations['finding_birads'].isna()) & (
             ~self.annotations['image_id'].isin(pos.image_id))]
 
         # Adjusting to compensate for class imbalance to include input neg_size
         neg = neg.sample(n=int(len(pos) / (1-neg_size)
-                         * neg_size), random_state=1)
+                         * neg_size), random_state=0)
         pos.loc[:, 'finding_categories'] = 0
         neg.loc[:, 'finding_categories'] = 1
 
@@ -84,8 +84,9 @@ class ProcessedAnnotation:
         for col in ['xmin', 'xmax']:
             self.annotations[col] *= self.target_width / self.annotations.width
         for col in ['ymin', 'ymax']:
-            self.annotations[col] *= self.target_height / \
-                self.annotations.height
+            self.annotations[col] *= self.target_height / self.annotations.height
+        self.annotations.loc[:, 'width'] = self.target_width
+        self.annotations.loc[:, 'height'] = self.target_height
 
     def _fix_invalid_boxes(self):
         """Clips box coordinates between 0 and width (x-coordinates) or height (y-coordinates)"""

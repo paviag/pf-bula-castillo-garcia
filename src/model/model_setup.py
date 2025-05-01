@@ -110,8 +110,8 @@ def run_model_setup():
     # Make YOLO model config file
     yolo_config = YOLOConfigGenerator(
         yaml_path, 
-        f"{yolo_dataset_path}/images/train", 
-        f"{yolo_dataset_path}/images/val", 
+        "dataset/images/train", 
+        "dataset/images/val", 
         1, 
         ["0"],
     )

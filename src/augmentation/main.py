@@ -4,7 +4,7 @@ from config import config
 
 def run_augmentations():
     annotations_dir = f"{config.output_data_path}/annotations.csv"
-    processed_base_path = f"{config.output_image_path}/annotations.csv"
+    processed_base_path = config.output_image_path
     output_annotations_path = f"{config.output_data_path}/annotations.csv"
 
     augmentor = ImageAugmentor()    # default number of augmentations is 3

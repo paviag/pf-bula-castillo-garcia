@@ -40,10 +40,12 @@ def _generate_confusion_matrix(ytrue, ypred, class_labels, save_path):
     Saves fig of confusion matrix.
     """
 
+    plt.figure(figsize=(8, 5), facecolor='#00000000')
     # Generate the confusion matrix
     ConfusionMatrixDisplay.from_predictions(
         ytrue, ypred, cmap='Blues', display_labels=class_labels
     )
+    plt.title("Confusion Matrix")
 
     # Save the image to output path
     plt.savefig(save_path)
@@ -53,7 +55,7 @@ def _get_box_metrics(model):
     """
     Returns box validation metrics as dict with keys 'mAP50' and 'mAP50-95'
     """
-    results = model.val(plots=False)  # Runs validation and returns metrics
+    results = model.val(plots=False, data='data.yaml')  # Runs validation and returns metrics
     # Obtains box metrics
     return {k: results.results_dict[f"metrics/{k}(B)"] for k in ['mAP50', 'mAP50-95']}
 
@@ -64,15 +66,16 @@ def _generate_classification_report(ytrue, ypred, class_labels, box_metrics, sav
     """
     # Generate classification report
     report = classification_report(
-        ytrue, ypred, output_dict=True, labels=class_labels)
+        ytrue.astype(int), ypred.astype(int), output_dict=True)
+    
     for k in box_metrics:
         report[class_labels[0]][k] = box_metrics[k]
-        report[class_labels[1]][k] = '-'
-
+        report[class_labels[1]][k] = 1
+        
     # Plot classification report
-    plt.figure(figsize=(8, 5))
+    plt.figure(figsize=(8, 5), facecolor='#00000000')
     sns.heatmap(pd.DataFrame(
-        report).iloc[:-1, :].T, annot=True, cmap="Blues", linewidths=0.5)
+        report).iloc[:, :].T, annot=True, cmap="Blues", linewidths=0.5, vmin=0, vmax=1)
     plt.title("Classification Report Heatmap")
     plt.xlabel("Metrics")
     plt.ylabel("Labels")
@@ -94,7 +97,7 @@ def run_validation(train_index):
     # Gets true values and predicted values of validation data
     ytrue, ypred = _get_ytrue_ypred(model, test_images_path)
     # Class labels for plots
-    class_labels = ["positive (0)", "negative (1)"]  
+    class_labels = ["0", "1"]  
 
     # Confusion matrix
     _generate_confusion_matrix(
