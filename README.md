@@ -33,15 +33,17 @@ De esta base, hemos extraído 1,659 casos específicos:
    - Clase 0: Con anomalías
    - Clase 1: Sin anomalías
 
-2. Conversión a formato YOLO:
-   - Transformación de coordenadas absolutas a normalizadas
+2. Corrección de cajas delimitadoras: Ajustar coordenadas para que se delimitaran dentro de las dimensiones de la imagen.
+
+4. Conversión a formato YOLO:
+   - Transformación de coordenadas absolutas a normalizadas YOLO.
    - Fórmulas para el cálculo:
-     - `x_center = (x_max - x_min) / (2 * ancho_imagen)`
-     - `y_center = (y_max - y_min) / (2 * alto_imagen)`
+     - `bx (x_center) = (x_max - x_min) / (2 * ancho_imagen)`
+     - `by (y_center) = (y_max - y_min) / (2 * alto_imagen)`
      - `bw = (x_max - x_min) / ancho_imagen`
      - `bh = (y_max - y_min) / alto_imagen`
 
-3. Procesamiento de imágenes:
+5. Procesamiento de imágenes:
    - Conversión de DICOM a PNG
    - Estandarización: MONOCHROME1 (fondo blanco) a MONOCHROME2 (fondo negro)
    - Mejora de contraste: VOI LUT y filtro CLAHE
