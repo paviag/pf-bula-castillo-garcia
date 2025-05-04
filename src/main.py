@@ -5,7 +5,7 @@ from model.model_setup import run_model_setup
 from tuning.main import run_tuning
 from tuning.train_index import TrainIndexManager
 from model.model import run_model
-from evaluation.main import run_validation
+from evaluation.main_test import run_validation
 
 
 def main(run_tuning_sp=False, omit_setup=True):

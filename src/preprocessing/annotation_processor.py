@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 
 
 class ProcessedAnnotation:
@@ -31,53 +31,68 @@ class ProcessedAnnotation:
 
         self.annotations = pd.concat([pos, neg], ignore_index=True)
 
+    from sklearn.model_selection import train_test_split
+
     def _set_splits(self):
-        """Returns annotations with set splits for stratified train/test split"""
-        sss = StratifiedShuffleSplit(
-            n_splits=1, test_size=self.test_size, random_state=0)
-        # Stores annotations with no boxes for stratified split indices
-        annot_no_boxes = self.annotations.drop(
-            columns=['xmin', 'ymin', 'xmax', 'ymax'])
-        # Stores indexes in annotations for each image_id
+        """Returns annotations with set train, val, test splits for stratified train/test split"""
+        # Get unique image IDs with finding categories
+        unique_images = self.annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
+
+        # Separate based on finding_categories
+        images_0 = unique_images[unique_images['finding_categories'] == 0]
+        images_1 = unique_images[unique_images['finding_categories'] == 1]
+
+        # Create mapping of image_id to annotation indices
         imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
                         for im_id in self.annotations.image_id.unique()}
-        annot_no_boxes = annot_no_boxes.drop_duplicates(
-            subset=['image_id'])    # Keep only one row per image
 
-        # Split images into train/test and set split for all rows belonging to that
-        # image in annotations
-        for train_idx, test_idx in sss.split(annot_no_boxes.drop(columns=['finding_categories']),
-                                             annot_no_boxes.finding_categories):
-            train_ids = annot_no_boxes.iloc[train_idx].image_id
-            test_ids = annot_no_boxes.iloc[test_idx].image_id
+        # Stratify positive cases (finding_categories = 0) into train, val, test
+        train_0, temp_0 = train_test_split(images_0, test_size=0.30, random_state=0)
+        val_0, test_0 = train_test_split(temp_0, test_size=0.50, random_state=0)  # Splitting remaining 30% into 15/15
 
-            self.annotations.loc[sum([imid_indexes[im]
-                                      for im in train_ids], []), 'split'] = 'train'
-            self.annotations.loc[sum([imid_indexes[im]
-                                      for im in test_ids], []), 'split'] = 'val'
-        """ OLD CODE IN CASE IT BREAKS
-        # Stores annotations with no boxes for stratified split indices
-        annot_no_boxes = annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax'])
-        # Stores indexes in annotations for each image_id
-        imid_indexes = pd.Series()
-        for im_id in annotations.image_id.unique():
-            imid_indexes.loc[im_id] = annotations[annotations.image_id == im_id].index.tolist()
-            annot_no_boxes.drop(  # Keep only one row per image
-                index=imid_indexes[im_id][1:], 
-                inplace=True)  
+        # Stratify negative cases (finding_categories = 1) into train, test
+        train_1, test_1 = train_test_split(images_1, test_size=0.30, random_state=0)  # No validation for this group
+
+        # Combine train, val, and test sets
+        train_images = pd.concat([train_0, train_1])
+        val_images = val_0  # Only positive cases for model validation during training
+        test_images = pd.concat([test_0, test_1])
+
+        # Convert image IDs to lists
+        train_ids = train_images['image_id'].tolist()
+        val_ids = val_images['image_id'].tolist()
+        test_ids = test_images['image_id'].tolist()
+
+        # Assign split values to annotations
+        self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), 'split'] = 'train'
+        self.annotations.loc[sum([imid_indexes[im] for im in val_ids], []), 'split'] = 'val'
+        self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), 'split'] = 'test'
+
+    def _set_splitsold(self):
+        """Returns annotations with set splits for stratified train/test split"""
+        # Get unique image IDs and their corresponding finding categories
+        unique_images = self.annotations.drop(
+            columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
         
-        # Split images into train/test and set split for all rows belonging to that
-        # image in annotations
-        for train_index, test_index in sss.split(annot_no_boxes.drop(columns=['finding_categories']),
-                                                 annot_no_boxes.finding_categories):
-            im_id = annot_no_boxes.iloc[train_index].image_id
-            annotations.loc[
-                [i for j in imid_indexes[im_id].values.tolist() for i in j], 
-                'split'] = 'train'
-            im_id = annot_no_boxes.iloc[test_index].image_id
-            annotations.loc[
-                [i for j in imid_indexes[im_id].values.tolist() for i in j], 
-                'split'] = 'val'"""
+        # Create a mapping of image_id to all corresponding annotation indices
+        imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
+                        for im_id in self.annotations.image_id.unique()}
+        
+        # Split the unique images dataset while stratifying by finding_categories
+        train_images, test_images = train_test_split(
+            unique_images,
+            test_size=self.test_size,
+            random_state=0,
+            stratify=unique_images['finding_categories']
+        )
+        
+        # Get the train and test image IDs
+        train_ids = train_images['image_id'].tolist()
+        test_ids = test_images['image_id'].tolist()
+        
+        # Set split values for all annotations based on their image_id
+        self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), 'split'] = 'train'
+        self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), 'split'] = 'val'
 
     def _scale_bounding_boxes(self):
         """Scales annotations' bounding boxes to target dimensions"""

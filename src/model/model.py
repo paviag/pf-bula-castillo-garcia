@@ -7,14 +7,14 @@ print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
 print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
 
 
-def run_model(best_trials_path=config.best_trials_path, epochs=128):
+def run_model(best_trials_path=config.best_trials_path, epochs=60):
     # Get available device
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     device = torch.device("cpu")
 
-    # Create model from YOLOv8n
-    model = YOLO("yolov8n.pt")
+    # Create model from YOLOv8l
+    model = YOLO("yolov8l.pt")
     model.to(device)    # Link to device
 
     # Get best hyperparameters
@@ -27,6 +27,7 @@ def run_model(best_trials_path=config.best_trials_path, epochs=128):
     model.train(
         data=config.yolo_config_path,
         optimizer="AdamW",
+        # Load best hyperparameters from Optuna best trials
         lr0=best_hyperparams["lr0"],
         lrf=best_hyperparams["lrf"],
         momentum=best_hyperparams["momentum"],
@@ -36,8 +37,26 @@ def run_model(best_trials_path=config.best_trials_path, epochs=128):
         box=best_hyperparams["box"],
         cls=best_hyperparams["cls"],
         batch=int(best_hyperparams["batch"]),
+        # Manage color augmentations for mammograms
+        hsv_h=0.0, 
+        hsv_s=0.0, 
+        hsv_v=0.2,
+        # Manage geometric augmentations for mammograms (flips already applied)
+        degrees=15.0,
+        fliplr=0.0,
+        flipud=0.0,
+        translate=0.1,
+        scale=0.2,
+        # Disable inappropriate augmentations for mammograms
+        shear=0.0,
+        mosaic=0.0,
+        mixup=0.0,
+        copy_paste=0.0,
+        # Remaining training parameters
         epochs=epochs,
         imgsz=640,
-        device=0,
+        device=0,   # Use GPU 0
         workers=1,
+        save_period=10, # Save every 10 epochs
+        patience=30, # Early stopping if there is no improvement
     )

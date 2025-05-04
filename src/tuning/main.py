@@ -10,7 +10,7 @@ def run_tuning():
     yolo_config_path = config.yolo_config_path
 
     train_index_manager = TrainIndexManager()
-    trainer = YOLOTrainer(config_path=yolo_config_path, train_index_manager=train_index_manager, runs_path=runs_path, trial_epochs=30)  # default 10 epochs per trial
+    trainer = YOLOTrainer(config_path=yolo_config_path, train_index_manager=train_index_manager, runs_path=runs_path, trial_epochs=20)  # default 10 epochs per trial
     optuna_manager = OptunaStudyManager(trainer, sqlite_file=f"sqlite:///{output_data_dir}/optuna_study.db") 
     optuna_manager.run_optimization()   # default 50 trials
     
