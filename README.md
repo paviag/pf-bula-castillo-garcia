@@ -19,7 +19,7 @@ De esta base, hemos extraído 1,659 casos específicos:
 
 ## Preprocesamiento*
 
-\*Los resultados de esta fase, previo al aumento de datos, pueden visualizarse en `notebooks/eda_annotations_processed.ipynb`,
+\*Los resultados de esta fase, previo al aumento de datos, pueden visualizarse en `notebooks/eda_annotations_processed.ipynb`.
 
 ### Estratificación de Datos
 - Distribución: 85% de casos anómalos y 15% de casos no anómalos
