@@ -7,7 +7,7 @@ print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
 print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
 
 
-def run_model(best_trials_path=config.best_trials_path, epochs=60):
+def run_model(best_trials_path=config.best_trials_path, epochs=128):
     # Get available device
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
@@ -58,5 +58,5 @@ def run_model(best_trials_path=config.best_trials_path, epochs=60):
         device=0,   # Use GPU 0
         workers=1,
         save_period=10, # Save every 10 epochs
-        patience=30, # Early stopping if there is no improvement
+        patience=40, # Early stopping if there is no improvement
     )

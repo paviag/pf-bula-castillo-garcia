@@ -31,32 +31,34 @@ class ProcessedAnnotation:
 
         self.annotations = pd.concat([pos, neg], ignore_index=True)
 
-    from sklearn.model_selection import train_test_split
-
     def _set_splits(self):
-        """Returns annotations with set train, val, test splits for stratified train/test split"""
+        """Returns annotations with set train, val, test splits for stratified 75/15/15 split"""
         # Get unique image IDs with finding categories
         unique_images = self.annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
-
-        # Separate based on finding_categories
-        images_0 = unique_images[unique_images['finding_categories'] == 0]
-        images_1 = unique_images[unique_images['finding_categories'] == 1]
+        
+        # Create a stratification label by combining all relevant columns
+        relevant_columns = ['laterality', 'view_position', 'breast_density', 'finding_categories']
+        unique_images['stratify_label'] = unique_images.apply(lambda row: '_'.join(map(str, row[relevant_columns])), axis=1)
+        
+        # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
+        label_counts = unique_images['stratify_label'].value_counts()
+        rare_labels = label_counts[label_counts < 2].index
+        unique_images['stratify_label'] = unique_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+        
+        # Split the data into train and temp sets (70% train, 30% temp)
+        train_images, temp_images = train_test_split(unique_images, test_size=0.3, stratify=unique_images['stratify_label'], random_state=0)
+        
+        # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
+        label_counts = temp_images['stratify_label'].value_counts()
+        rare_labels = label_counts[label_counts < 2].index
+        temp_images['stratify_label'] = temp_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+        
+        # Split the temp set into validation and test sets
+        val_images, test_images = train_test_split(temp_images, test_size=0.5, stratify=temp_images['stratify_label'], random_state=0)
 
         # Create mapping of image_id to annotation indices
         imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
                         for im_id in self.annotations.image_id.unique()}
-
-        # Stratify positive cases (finding_categories = 0) into train, val, test
-        train_0, temp_0 = train_test_split(images_0, test_size=0.30, random_state=0)
-        val_0, test_0 = train_test_split(temp_0, test_size=0.50, random_state=0)  # Splitting remaining 30% into 15/15
-
-        # Stratify negative cases (finding_categories = 1) into train, test
-        train_1, test_1 = train_test_split(images_1, test_size=0.30, random_state=0)  # No validation for this group
-
-        # Combine train, val, and test sets
-        train_images = pd.concat([train_0, train_1])
-        val_images = val_0  # Only positive cases for model validation during training
-        test_images = pd.concat([test_0, test_1])
 
         # Convert image IDs to lists
         train_ids = train_images['image_id'].tolist()
@@ -67,32 +69,6 @@ class ProcessedAnnotation:
         self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), 'split'] = 'train'
         self.annotations.loc[sum([imid_indexes[im] for im in val_ids], []), 'split'] = 'val'
         self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), 'split'] = 'test'
-
-    def _set_splitsold(self):
-        """Returns annotations with set splits for stratified train/test split"""
-        # Get unique image IDs and their corresponding finding categories
-        unique_images = self.annotations.drop(
-            columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
-        
-        # Create a mapping of image_id to all corresponding annotation indices
-        imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
-                        for im_id in self.annotations.image_id.unique()}
-        
-        # Split the unique images dataset while stratifying by finding_categories
-        train_images, test_images = train_test_split(
-            unique_images,
-            test_size=self.test_size,
-            random_state=0,
-            stratify=unique_images['finding_categories']
-        )
-        
-        # Get the train and test image IDs
-        train_ids = train_images['image_id'].tolist()
-        test_ids = test_images['image_id'].tolist()
-        
-        # Set split values for all annotations based on their image_id
-        self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), 'split'] = 'train'
-        self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), 'split'] = 'val'
 
     def _scale_bounding_boxes(self):
         """Scales annotations' bounding boxes to target dimensions"""

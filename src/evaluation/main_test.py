@@ -56,7 +56,7 @@ def _generate_classification_report(ytrue, ypred, class_labels, box_metrics, sav
     # Plot classification report
     plt.figure(figsize=(8, 5), facecolor='#00000000')
     sns.heatmap(pd.DataFrame(
-        report).iloc[:, :].T, annot=True, cmap="Blues", linewidths=0.5, vmin=0, vmax=1)
+        report).iloc[:, :].T.drop(columns=["support"]), annot=True, cmap="Purples", linewidths=0.5, vmin=0, vmax=1)
     plt.title("Classification Report Heatmap")
     plt.xlabel("Metrics")
     plt.ylabel("Labels")
@@ -72,7 +72,7 @@ def _generate_confusion_matrix(ytrue, ypred, class_labels, save_path):
     plt.figure(figsize=(8, 5), facecolor='#00000000')
     # Generate the confusion matrix
     ConfusionMatrixDisplay.from_predictions(
-        ytrue, ypred, cmap='Blues'#, display_labels=class_labels
+        ytrue, ypred, cmap='Purples'#, display_labels=class_labels
     )
     plt.title("Confusion Matrix")
 
