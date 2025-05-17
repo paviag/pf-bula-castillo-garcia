@@ -34,18 +34,24 @@ class DatasetOrganizer:
         self.label_dir = label_dir
         os.makedirs(self.base_yolo_path, exist_ok=True)
 
+    def get_split_labels(self, row):
+        if row.split == "test":
+            return ["test"]
+        return [f"{row[col]}_{col.split('_')[1]}" for col in row.index if row[col] != '0' and col.startswith("group")]
+
     def move_files(self):
         for im_id, rows in self.annotations.groupby('image_id'):
-            first = rows.head(1)
-            split_folder = first.split.item()
-            self._move_image(first, im_id, split_folder)
-            self._move_label(im_id, split_folder)
+            first = rows.iloc[0]
+            split_folders = self.get_split_labels(first)
+            for split_folder in split_folders:
+                self._move_image(first, im_id, split_folder)
+                self._move_label(im_id, split_folder)
 
     def _move_image(self, first, im_id, split_folder):
         img_dest_path = os.path.join(
             self.base_yolo_path, "images", split_folder, f"{im_id}.jpg")
         os.makedirs(os.path.dirname(img_dest_path), exist_ok=True)
-        shutil.copy(first.directory_path.item(), img_dest_path)
+        shutil.copy(first.directory_path, img_dest_path)
 
     def _move_label(self, im_id, split_folder):
         label_src_path = os.path.join(self.label_dir, f"{im_id}.txt")
@@ -88,13 +94,14 @@ class FolderValidator:
                 f"{full_path}: {'✅ Exists' if os.path.exists(full_path) else '❌ Does not exist'}")
 
 
-def run_model_setup():
+def run_model_setup(num_groups=3):
     annotations_file = pd.read_csv(f"{config.output_data_path}/annotations.csv")
     yolo_labels_path = config.yolo_labels_path
     yolo_dataset_path = config.yolo_dataset_path
     yaml_path = config.yolo_config_path
-    expected_folders = ["images/train", "images/val",
-                        "images/test", "labels/train", "labels/val", "labels/test"]
+    expected_folders = [f"{folder}_{i}" for folder in ["images/train", "images/val",
+                        "labels/train", "labels/val"] 
+                        for i in range(num_groups)]+["images/test", "labels/test"]
 
     # Generate labels
     yolo_label_gen = YOLOLabelGenerator(annotations_file, yolo_labels_path)
@@ -104,15 +111,16 @@ def run_model_setup():
         annotations_file, yolo_dataset_path, yolo_labels_path)
     dataset_organizer.move_files()
     # Make YOLO model config file
-    yolo_config = YOLOConfigGenerator(
-        yaml_path, 
-        "dataset/images/train", 
-        "dataset/images/val", 
-        "dataset/images/test", 
-        1, 
-        ["0"],
-    )
-    yolo_config.save_config()
+    for i in range(num_groups):
+        yolo_config = YOLOConfigGenerator(
+            yaml_path.replace(".yaml", f"_{i}.yaml"), 
+            f"dataset/images/train_{i}", 
+            f"dataset/images/val_{i}", 
+            f"dataset/images/test", 
+            1, 
+            ["0"],
+        )
+        yolo_config.save_config()
     # Check expected folders were created
     folder_validator = FolderValidator(yolo_dataset_path, expected_folders)
     folder_validator.validate_folders()

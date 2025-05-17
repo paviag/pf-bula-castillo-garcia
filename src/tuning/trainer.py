@@ -20,7 +20,7 @@ class YOLOTrainer:
         
         subprocess.run([
             "yolo", "train",
-            f"data={self.config_path}",
+            f"data={self.config_path.replace('.yaml', '_0.yaml')}",
             "optimizer=AdamW",
             "model=yolov8l.pt",
             f"epochs={self.trial_epochs}",

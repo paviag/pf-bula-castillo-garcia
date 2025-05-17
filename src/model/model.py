@@ -2,12 +2,13 @@ from config import config
 from ultralytics import YOLO
 import torch
 from extra.utils import get_best_iteration
-print("CUDA is available:", torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
-print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
-print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
 
 
-def run_model(best_trials_path=config.best_trials_path, epochs=128):
+def run_model(group, best_trials_path=config.best_trials_path, epochs=100):
+    print("CUDA is available:", torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
+    print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
+    print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
+
     # Get available device
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
@@ -25,7 +26,7 @@ def run_model(best_trials_path=config.best_trials_path, epochs=128):
 
     # Train model
     model.train(
-        data=config.yolo_config_path,
+        data=config.yolo_config_path.replace(".yaml", f"_{group}.yaml"),
         optimizer="AdamW",
         # Load best hyperparameters from Optuna best trials
         lr0=best_hyperparams["lr0"],

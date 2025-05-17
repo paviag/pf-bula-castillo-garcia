@@ -4,7 +4,7 @@ from preprocessing.image_handler import ImageDatasetHandler
 from config import config
 
 
-def run_preprocessing():
+def run_preprocessing(num_groups=3):
     dicom_zip = config.dicom_zip
     annotations_path = f"{config.input_data_path}/finding_annotations.csv"
     metadata_path = f"{config.input_data_path}/metadata.csv"
@@ -15,9 +15,10 @@ def run_preprocessing():
     # default target size 640x640
     image_handler = ImageDatasetHandler(
         dicom_zip, metadata_path, output_image_dir)
-    # default test size 0.2 and target size 640x640
-    annotations = ProcessedAnnotation(annotations_path).annotations
-
+    
+    # default  target size 640x640
+    annotations = ProcessedAnnotation(annotations_path, num_groups).annotations
+    
     for im_id, rows in annotations.groupby('image_id'):
         first = rows.iloc[0]
         # Extracts processed dicom file from zip

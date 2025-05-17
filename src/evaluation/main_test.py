@@ -1,110 +1,95 @@
 import os
 import glob
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import ConfusionMatrixDisplay, classification_report
 from ultralytics import YOLO
 from config import config
+from evaluation.ensemble import ensemble_predict_wbf
+from evaluation.visualization import generate_confusion_matrix, generate_classification_report
+from evaluation.metric_utils import calculate_map_from_boxes, xywh_to_xyxy
 
 
-def _get_ypred(model, test_image_dir):
+def _get_ypred(model, image_files):
     """
-    Returns predicted values of test data.
+    Returns predicted values of test data for a single model.
     """
-    results = model.predict(test_image_dir, save=False)
+    
+    results = model.predict(image_files, verbose=False, save=False, stream=True)
     ypred = [0 if len(r.boxes.cls.unique()) > 0 else 1 for r in results]  # Only class "0" exists
     return np.array(ypred)
 
-def _get_ytrue(label_dir):
+def _get_ytrue(label_files):
     """
-    Returns true values of test data.
+    Returns true class labels and boxes from test data.
+    Boxes are returned in the xyxy format.
     """
     ytrue = []
-    for label_file in glob.glob(os.path.join(label_dir, "*.txt")):
+    boxes = []
+    for label_file in label_files:
         with open(label_file, "r") as f:
             lines = f.readlines()
             if lines:
                 ytrue.append(0)
+                boxes.append([np.array(list(map(float, line.split()[1:]))) for line in lines])
             else:
                 ytrue.append(1)
-                
-    return np.array(ytrue)
+                boxes.append(np.array([]))
+    # Convert boxes to xyxy format
+    return np.array(ytrue), xywh_to_xyxy(boxes)   
 
-def _get_box_metrics(model):
+def _get_box_metrics(model, idx):
     """
-    Returns box validation metrics as dict with keys 'mAP50' and 'mAP50-95'
+    Returns box validation metrics from single model val 
+    as dict with keys 'mAP50' and 'mAP50-95'
     """
-    results = model.val(data="data.yaml", split="test", plots=False)
+    results = model.val(data=f"data_{idx}.yaml", split="test", plots=False)
 
     # Extract mAP metrics
     return {k: results.results_dict[f"metrics/{k}(B)"] for k in ['mAP50', 'mAP50-95']}
 
-def _generate_classification_report(ytrue, ypred, class_labels, box_metrics, save_path):
-    """
-    Saves fig of classification report.
-    """
-    # Generate classification report
-    report = classification_report(
-        ytrue.astype(int), ypred.astype(int), output_dict=True)
-    
-    for k in box_metrics:
-        report[class_labels[0]][k] = box_metrics[k]
-        report[class_labels[1]][k] = box_metrics[k]
-
-    # Plot classification report
-    plt.figure(figsize=(8, 5), facecolor='#00000000')
-    sns.heatmap(pd.DataFrame(
-        report).iloc[:, :].T.drop(columns=["support"]), annot=True, cmap="Purples", linewidths=0.5, vmin=0, vmax=1)
-    plt.title("Classification Report Heatmap")
-    plt.xlabel("Metrics")
-    plt.ylabel("Labels")
-
-    # Save the image to output path
-    plt.savefig(save_path)
-
-def _generate_confusion_matrix(ytrue, ypred, class_labels, save_path):
-    """
-    Saves fig of confusion matrix.
-    """
-
-    plt.figure(figsize=(8, 5), facecolor='#00000000')
-    # Generate the confusion matrix
-    ConfusionMatrixDisplay.from_predictions(
-        ytrue, ypred, cmap='Purples'#, display_labels=class_labels
-    )
-    plt.title("Confusion Matrix")
-
-    # Save the image to output path
-    plt.savefig(save_path)
-
 def run_validation(train_index):
-    model_path = f"{config.runs_path}/train{train_index}/weights/best.pt"
     output_val_path = config.output_validation_path
     test_images_path = f"{config.yolo_dataset_path}/images/test"
     test_labels_path = f"{config.yolo_dataset_path}/labels/test"
 
-    model = YOLO(model_path)  # YOLO working model created from best weights
+    # Sort image and label files to ensure they are in the same order
+    image_files = sorted(glob.glob(f"{test_images_path}/*.jpg"))
+    label_files = sorted(glob.glob(f"{test_labels_path}/*.txt"))
+    
+    # Gets true values of test data
+    ytrue, true_boxes = _get_ytrue(label_files)
+    
+    if isinstance(train_index, list):
+        # Load models
+        model_paths = [f"{config.runs_path}/train{idx}/weights/best.pt" for idx in train_index]
+        models = [YOLO(model_path) for model_path in model_paths]
+        # Get ensemble predictions 
+        ypred, pred_boxes, conf_scores = ensemble_predict_wbf(models, image_files)
+        
+        # Get box metrics
+        box_metrics = calculate_map_from_boxes(pred_boxes, true_boxes, conf_scores)
+        
+        # Join train indexes for saving
+        train_index = "_".join([str(idx) for idx in train_index])    
+    else:
+        # Load single model
+        model_path = f"{config.runs_path}/train{train_index}/weights/best.pt"
+        model = YOLO(model_path)
+        # Get predictions
+        ypred = _get_ypred(model, image_files)
+        # Get box metrics
+        box_metrics = _get_box_metrics(model)
 
-    box_metrics = _get_box_metrics(model)  # Obtains box metrics
-
-    # Gets true values and predicted values of validation data
-    ytrue = _get_ytrue(test_labels_path)
-    ypred = _get_ypred(model, test_images_path)
-    print(len(ypred), len(ytrue))
     # Class labels for plots
     class_labels = ["0", "1"]  
 
     # Confusion matrix
-    _generate_confusion_matrix(
+    generate_confusion_matrix(
         ytrue,
         ypred,
-        class_labels,
         f"{output_val_path}/confusion_matrix_run{train_index}",
     )
     # Classification report
-    _generate_classification_report(
+    generate_classification_report(
         ytrue,
         ypred,
         class_labels,

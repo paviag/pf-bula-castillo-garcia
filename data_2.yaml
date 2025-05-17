@@ -1,0 +1,6 @@
+names:
+- '0'
+nc: 1
+test: dataset/images/test
+train: dataset/images/train_2
+val: dataset/images/val_2
