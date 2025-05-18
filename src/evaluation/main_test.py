@@ -12,9 +12,12 @@ def _get_ypred(model, image_files):
     """
     Returns predicted values of test data for a single model.
     """
-    
-    results = model.predict(image_files, verbose=False, save=False, stream=True)
-    ypred = [0 if len(r.boxes.cls.unique()) > 0 else 1 for r in results]  # Only class "0" exists
+    ypred = []
+    for r in model.predict(image_files, verbose=False, save=False, stream=True, device='cpu', imgsz=640):
+        if len(r.boxes.cls.unique()) > 0:
+            ypred.append(0)
+        else:
+            ypred.append(1)
     return np.array(ypred)
 
 def _get_ytrue(label_files):
@@ -76,12 +79,14 @@ def run_validation(train_index):
         model = YOLO(model_path)
         # Get predictions
         ypred = _get_ypred(model, image_files)
+        print("ypred", len(ypred))
         # Get box metrics
         box_metrics = _get_box_metrics(model)
 
     # Class labels for plots
     class_labels = ["0", "1"]  
 
+    print(len(ypred), len(ytrue), len(true_boxes))
     # Confusion matrix
     generate_confusion_matrix(
         ytrue,

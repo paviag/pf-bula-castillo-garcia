@@ -37,9 +37,9 @@ class ProcessedAnnotation:
         neg_image_ids = unique_neg_images.image_id.to_numpy()
         np.random.shuffle(neg_image_ids)
 
-        # Get a random subsample ensuring 65/35 split for positive/negative
+        # Get a random subsample ensuring 70/30 split for positive/negative
         neg_image_ids = np.random.choice(
-            neg_image_ids, size=int(len(pos) / 0.65 * 0.35), replace=False)
+            neg_image_ids, size=int(len(pos) / 0.7 * 0.3), replace=False)
         # Filter negatives to include only sampled images
         neg = neg[neg.image_id.isin(neg_image_ids)]
 
