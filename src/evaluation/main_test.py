@@ -8,16 +8,34 @@ from evaluation.visualization import generate_confusion_matrix, generate_classif
 from evaluation.metric_utils import calculate_map_from_boxes, xywh_to_xyxy
 
 
-def _get_ypred(model, image_files):
+def _get_ypred(model, image_files, batch_size=8):
     """
     Returns predicted values of test data for a single model.
     """
     ypred = []
-    for r in model.predict(image_files, verbose=False, save=False, stream=True, device='cpu', imgsz=640):
-        if len(r.boxes.cls.unique()) > 0:
-            ypred.append(0)
-        else:
-            ypred.append(1)
+    
+    for i in range(0, len(test_images), batch_size):
+        batch = test_images[i:i+batch_size]
+        
+        # Clear GPU cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Process batch
+        results = model.predict(
+            batch,
+            save=False,
+            verbose=False,
+            conf=0.45,
+            stream=True
+        )
+        
+        for r in results:
+            if len(r.boxes.cls.unique()) > 0:
+                ypred.append(0)  # Object detected
+            else:
+                ypred.append(1)  # No object detected
+    
     return np.array(ypred)
 
 def _get_ytrue(label_files):
