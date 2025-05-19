@@ -3,9 +3,8 @@ from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 
 
 class ProcessedAnnotation:
-    def __init__(self, annotations, test_size=0.2, target_size=(640, 640)):
+    def __init__(self, annotations, target_size=(640, 640)):
         self.annotations = pd.read_csv(annotations)
-        self.test_size = test_size
         self.target_width, self.target_height = target_size
 
         self._reproportion_class_distribution()
@@ -14,7 +13,7 @@ class ProcessedAnnotation:
         self._scale_bounding_boxes()
         self._add_yolo_label_cols()
 
-    def _reproportion_class_distribution(self, neg_size=0.15):
+    def _reproportion_class_distribution(self, neg_size=0.2):
         """Returns reproportioned annotations with adjusted positive/negative distribution"""
         # Filtering positive/negative cases
         pos = self.annotations[self.annotations.finding_categories.apply(lambda x: any(

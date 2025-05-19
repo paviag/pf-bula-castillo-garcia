@@ -2,10 +2,6 @@ from config import config
 from ultralytics import YOLO
 import torch
 from extra.utils import get_best_iteration
-print("CUDA is available:", torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
-print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
-print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
-
 
 def run_model(best_trials_path=config.best_trials_path, epochs=128):
     # Get available device

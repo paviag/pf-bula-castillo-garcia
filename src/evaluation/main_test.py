@@ -7,22 +7,46 @@ import seaborn as sns
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
 from ultralytics import YOLO
 from config import config
+import torch
+import gc
 
 
-def _get_ypred(model, test_image_dir):
+def _get_ypred(model, test_images, batch_size=16):
     """
     Returns predicted values of test data.
     """
-    results = model.predict(test_image_dir, save=False)
-    ypred = [0 if len(r.boxes.cls.unique()) > 0 else 1 for r in results]  # Only class "0" exists
+    ypred = []
+    
+    for i in range(0, len(test_images), batch_size):
+        batch = test_images[i:i+batch_size]
+        
+        # Clear GPU cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Process batch
+        results = model.predict(
+            batch,
+            save=False,
+            verbose=False,
+            conf=0.45,
+            stream=True
+        )
+        
+        for r in results:
+            if len(r.boxes.cls.unique()) > 0:
+                ypred.append(0)  # Object detected
+            else:
+                ypred.append(1)  # No object detected
+    
     return np.array(ypred)
 
-def _get_ytrue(label_dir):
+def _get_ytrue(labels):
     """
     Returns true values of test data.
     """
     ytrue = []
-    for label_file in glob.glob(os.path.join(label_dir, "*.txt")):
+    for label_file in labels:
         with open(label_file, "r") as f:
             lines = f.readlines()
             if lines:
@@ -54,7 +78,7 @@ def _generate_classification_report(ytrue, ypred, class_labels, box_metrics, sav
         report[class_labels[1]][k] = box_metrics[k]
 
     # Plot classification report
-    plt.figure(figsize=(8, 5), facecolor='#00000000')
+    plt.figure(figsize=(8, 5))
     sns.heatmap(pd.DataFrame(
         report).iloc[:, :].T.drop(columns=["support"]), annot=True, cmap="Purples", linewidths=0.5, vmin=0, vmax=1)
     plt.title("Classification Report Heatmap")
@@ -85,13 +109,16 @@ def run_validation(train_index):
     test_images_path = f"{config.yolo_dataset_path}/images/test"
     test_labels_path = f"{config.yolo_dataset_path}/labels/test"
 
+    test_images = sorted(glob.glob(f"{test_images_path}/*.jpg"))
+    test_labels = sorted(glob.glob(f"{test_labels_path}/*.txt"))
+
     model = YOLO(model_path)  # YOLO working model created from best weights
 
     box_metrics = _get_box_metrics(model)  # Obtains box metrics
 
     # Gets true values and predicted values of validation data
-    ytrue = _get_ytrue(test_labels_path)
-    ypred = _get_ypred(model, test_images_path)
+    ytrue = _get_ytrue(test_labels)
+    ypred = _get_ypred(model, test_images)
     print(len(ypred), len(ytrue))
     # Class labels for plots
     class_labels = ["0", "1"]  
