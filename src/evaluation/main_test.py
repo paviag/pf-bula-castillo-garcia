@@ -1,4 +1,4 @@
-import os
+import torch
 import glob
 import numpy as np
 from ultralytics import YOLO
@@ -8,7 +8,7 @@ from evaluation.visualization import generate_confusion_matrix, generate_classif
 from evaluation.metric_utils import calculate_map_from_boxes, xywh_to_xyxy
 
 
-def _get_ypred(model, image_files, batch_size=8):
+def _get_ypred(model, test_images, batch_size=8):
     """
     Returns predicted values of test data for a single model.
     """
@@ -57,7 +57,7 @@ def _get_ytrue(label_files):
     # Convert boxes to xyxy format
     return np.array(ytrue), xywh_to_xyxy(boxes)   
 
-def _get_box_metrics(model, idx):
+def _get_box_metrics(model, idx=0):
     """
     Returns box validation metrics from single model val 
     as dict with keys 'mAP50' and 'mAP50-95'

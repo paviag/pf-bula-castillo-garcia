@@ -21,12 +21,12 @@ De esta base, hemos extraído 1,659 casos específicos:
 
 \*Los resultados de esta fase, previo al aumento de datos, pueden visualizarse en `notebooks/eda_annotations_processed.ipynb`.
 
-### Estratificación de Datos
-- Distribución: 85% de casos anómalos y 15% de casos no anómalos
+### Filtrado y división de Datos
+- Distribución: 70% de casos anómalos y 30% de casos no anómalos
 
-  * La inclusión de imágenes sin anomalías (15%) ayuda a reducir falsos positivos
- 
-- División: 70% entrenamiento, 15% validación (durante entrenamiento), 15% pruebas (después del entrenamiento)
+  * La inclusión de imágenes sin anomalías ayuda a reducir falsos positivos
+- División en 3 grupos para el entrenamiento de 3 modelos, cada uno con la misma distribución de casos anómalos y características relevantes, a modo de evitar sesgos y permitir que los modelos se complementen entre sí para la predicción.
+- División por cada grupo: 70% entrenamiento, 15% validación (durante entrenamiento), 15% pruebas (después del entrenamiento)
 
 ### Ajustes de Anotaciones y Mamografías
 1. Etiquetado: 
@@ -93,7 +93,7 @@ imgsz=640,
 device=0,   # Use GPU 0
 workers=1,
 save_period=10, # Save every 10 epochs
-patience=30, # Early stopping if there is no improvement
+patience=60, # Early stopping if there is no improvement
 ```
 (Código de `src/model/run_model`)
 
@@ -154,7 +154,6 @@ python src/main.py [opciones]
 │   ├── data/                # Datos (anotaciones, resultados de tuning)
 │   ├── images/              # Imágenes procesadas
 │   └── validation/          # Resultados de la evaluación de los modelos (matrices de confusión, reportes de clasificación)
-├── best_runs/               # Mejores modelos entrenados `TODO`
 ├── notebooks/               # Jupyter notebooks
 ├── src/                     # Código fuente
 │   ├── preprocessing/       # Scripts de preprocesamiento

@@ -37,9 +37,9 @@ class ProcessedAnnotation:
         neg_image_ids = unique_neg_images.image_id.to_numpy()
         np.random.shuffle(neg_image_ids)
 
-        # Get a random subsample ensuring 70/30 split for positive/negative
+        # Get a random subsample ensuring 80/20 split for positive/negative of each group
         neg_image_ids = np.random.choice(
-            neg_image_ids, size=int(len(pos) / 0.7 * 0.3), replace=False)
+            neg_image_ids, size=int(len(pos) / 0.65 * 0.35), replace=False)
         # Filter negatives to include only sampled images
         neg = neg[neg.image_id.isin(neg_image_ids)]
 
@@ -102,6 +102,8 @@ class ProcessedAnnotation:
             # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
             label_counts = temp_images['stratify_label'].value_counts()
             rare_labels = label_counts[label_counts < 2].index
+            print(f"Rare labels in group {i}: {rare_labels}")
+            print(label_counts[-10:])
             if len(rare_labels) == 1:
                 # Replace rare labels with the second most common label
                 temp_images[unique_images['stratify_label'] == rare_labels[0]]['stratify_label'] = label_counts.index[-2]

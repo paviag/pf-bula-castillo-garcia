@@ -26,7 +26,7 @@ def main(run_tuning_sp=False, omit_setup=True):
     train_indices = []
     # Run model training and evaluation for each group
     for i in range(NUM_GROUPS):
-        train_indices.append(228)#tim.get_index())
+        train_indices.append(tim.get_index())
         print(f"Running model training and evaluation for group {i} (index {train_indices[-1]})...")
         # Run model training and evaluation for each group
         run_model(group=i)
