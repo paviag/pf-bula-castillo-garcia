@@ -2,33 +2,6 @@ import numpy as np
 from mean_average_precision import MetricBuilder
 
 
-def compute_iou(pred, true):
-    """
-    Compute IoU between two boxes
-    
-    Returns IoU value
-    """
-    if len(pred) == 0 or len(true) == 0:
-        return 0.0
-    x1_pred, y1_pred, x2_pred, y2_pred = pred
-    x1_true, y1_true, x2_true, y2_true = true
-
-    # Compute intersection box coordinates
-    x1_inter = max(x1_pred, x1_true)
-    y1_inter = max(y1_pred, y1_true)
-    x2_inter = min(x2_pred, x2_true)
-    y2_inter = min(y2_pred, y2_true)
-
-    # Compute intersection area
-    inter_area = max(0, x2_inter - x1_inter) * max(0, y2_inter - y1_inter)
-
-    # Compute areas
-    pred_area = (x2_pred - x1_pred) * (y2_pred - y1_pred)
-    true_area = (x2_true - x1_true) * (y2_true - y1_true)
-    union_area = pred_area + true_area - inter_area
-
-    return inter_area / union_area if union_area > 0 else 0.0
-
 def xywh_to_xyxy(boxes_list):
     """
     Convert boxes from [x_center, y_center, w, h] to [x1, y1, x2, y2] format (both relative coordinates)
