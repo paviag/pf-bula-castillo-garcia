@@ -29,7 +29,7 @@ def _get_ypred(model, test_images, batch_size=16):
             batch,
             save=False,
             verbose=False,
-            conf=0.45,
+            conf=0.4,
             stream=True
         )
         

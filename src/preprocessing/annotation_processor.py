@@ -13,7 +13,7 @@ class ProcessedAnnotation:
         self._scale_bounding_boxes()
         self._add_yolo_label_cols()
 
-    def _reproportion_class_distribution(self, neg_size=0.2):
+    def _reproportion_class_distribution(self, neg_size=0.15):
         """Returns reproportioned annotations with adjusted positive/negative distribution"""
         # Filtering positive/negative cases
         pos = self.annotations[self.annotations.finding_categories.apply(lambda x: any(

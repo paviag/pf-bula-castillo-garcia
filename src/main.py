@@ -8,7 +8,7 @@ from model.model import run_model
 from evaluation.main_test import run_validation
 
 
-def main(run_tuning_sp=False, omit_setup=True):
+def main(run_tuning_sp, omit_setup):
     if not omit_setup:
         # Setup
         print("Running preprocessing...")
