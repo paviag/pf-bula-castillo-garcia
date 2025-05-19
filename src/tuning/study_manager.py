@@ -9,7 +9,7 @@ class OptunaStudyManager:
         self.trainer = trainer
         self.study = optuna.create_study(
             directions=4*['maximize'], 
-            storage=optuna.storages.SQLiteStorage(sqlite_file),
+            storage=sqlite_file,
             load_if_exists=True,
         )
 
@@ -26,5 +26,9 @@ class OptunaStudyManager:
             row = {k: v for k, v in zip(
                 columns, [t.number] + list(t.params.values()) + list(t.values))}
             best_trials.loc[len(best_trials)] = row
+        try:
+            current_best_trials = pd.read_csv(output_path)
+        except FileNotFoundError:
+            current_best_trials = pd.DataFrame(columns=columns)
+        best_trials = pd.concat([current_best_trials, best_trials])
         best_trials.to_csv(output_path, index=False)
-        print(best_trials)

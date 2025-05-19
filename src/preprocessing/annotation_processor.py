@@ -1,91 +1,82 @@
 import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 
 
 class ProcessedAnnotation:
-    def __init__(self, annotations, output_image_dir, test_size=0.2, target_size=(640, 640)):
+    def __init__(self, annotations, target_size=(640, 640)):
         self.annotations = pd.read_csv(annotations)
-        self.test_size = test_size
         self.target_width, self.target_height = target_size
 
-        self._fix_invalid_boxes()
         self._reproportion_class_distribution()
         self._set_splits()
+        self._fix_invalid_boxes()
         self._scale_bounding_boxes()
         self._add_yolo_label_cols()
 
-    def _reproportion_class_distribution(self, neg_size=0.15):
+    def _reproportion_class_distribution(self, neg_size=0.2):
         """Returns reproportioned annotations with adjusted positive/negative distribution"""
         # Filtering positive/negative cases
         pos = self.annotations[self.annotations.finding_categories.apply(lambda x: any(
             c in x for c in ["Mass", "Suspicious Calcification", "Suspicious Lymph Node"]))]
-        pos.dropna(subset=['finding_birads', 'xmin'])
+        pos = pos.dropna(subset=['finding_birads', 'xmin'])
         neg = self.annotations[(self.annotations['finding_birads'].isna()) & (
             ~self.annotations['image_id'].isin(pos.image_id))]
 
         # Adjusting to compensate for class imbalance to include input neg_size
         neg = neg.sample(n=int(len(pos) / (1-neg_size)
-                         * neg_size), random_state=1)
+                         * neg_size), random_state=0)
         pos.loc[:, 'finding_categories'] = 0
         neg.loc[:, 'finding_categories'] = 1
 
         self.annotations = pd.concat([pos, neg], ignore_index=True)
 
     def _set_splits(self):
-        """Returns annotations with set splits for stratified train/test split"""
-        sss = StratifiedShuffleSplit(
-            n_splits=1, test_size=self.test_size, random_state=0)
-        # Stores annotations with no boxes for stratified split indices
-        annot_no_boxes = self.annotations.drop(
-            columns=['xmin', 'ymin', 'xmax', 'ymax'])
-        # Stores indexes in annotations for each image_id
+        """Returns annotations with set train, val, test splits for stratified 75/15/15 split"""
+        # Get unique image IDs with finding categories
+        unique_images = self.annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
+        
+        # Create a stratification label by combining all relevant columns
+        relevant_columns = ['laterality', 'view_position', 'breast_density', 'finding_categories']
+        unique_images['stratify_label'] = unique_images.apply(lambda row: '_'.join(map(str, row[relevant_columns])), axis=1)
+        
+        # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
+        label_counts = unique_images['stratify_label'].value_counts()
+        rare_labels = label_counts[label_counts < 2].index
+        unique_images['stratify_label'] = unique_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+        
+        # Split the data into train and temp sets (70% train, 30% temp)
+        train_images, temp_images = train_test_split(unique_images, test_size=0.3, stratify=unique_images['stratify_label'], random_state=0)
+        
+        # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
+        label_counts = temp_images['stratify_label'].value_counts()
+        rare_labels = label_counts[label_counts < 2].index
+        temp_images['stratify_label'] = temp_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+        
+        # Split the temp set into validation and test sets
+        val_images, test_images = train_test_split(temp_images, test_size=0.5, stratify=temp_images['stratify_label'], random_state=0)
+
+        # Create mapping of image_id to annotation indices
         imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
                         for im_id in self.annotations.image_id.unique()}
-        annot_no_boxes = annot_no_boxes.drop_duplicates(
-            subset=['image_id'])    # Keep only one row per image
 
-        # Split images into train/test and set split for all rows belonging to that
-        # image in annotations
-        for train_idx, test_idx in sss.split(annot_no_boxes.drop(columns=['finding_categories']),
-                                             annot_no_boxes.finding_categories):
-            train_ids = annot_no_boxes.iloc[train_idx].image_id
-            test_ids = annot_no_boxes.iloc[test_idx].image_id
+        # Convert image IDs to lists
+        train_ids = train_images['image_id'].tolist()
+        val_ids = val_images['image_id'].tolist()
+        test_ids = test_images['image_id'].tolist()
 
-            self.annotations.loc[sum([imid_indexes[im]
-                                      for im in train_ids], []), 'split'] = 'train'
-            self.annotations.loc[sum([imid_indexes[im]
-                                      for im in test_ids], []), 'split'] = 'val'
-        """ OLD CODE IN CASE IT BREAKS
-        # Stores annotations with no boxes for stratified split indices
-        annot_no_boxes = annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax'])
-        # Stores indexes in annotations for each image_id
-        imid_indexes = pd.Series()
-        for im_id in annotations.image_id.unique():
-            imid_indexes.loc[im_id] = annotations[annotations.image_id == im_id].index.tolist()
-            annot_no_boxes.drop(  # Keep only one row per image
-                index=imid_indexes[im_id][1:], 
-                inplace=True)  
-        
-        # Split images into train/test and set split for all rows belonging to that
-        # image in annotations
-        for train_index, test_index in sss.split(annot_no_boxes.drop(columns=['finding_categories']),
-                                                 annot_no_boxes.finding_categories):
-            im_id = annot_no_boxes.iloc[train_index].image_id
-            annotations.loc[
-                [i for j in imid_indexes[im_id].values.tolist() for i in j], 
-                'split'] = 'train'
-            im_id = annot_no_boxes.iloc[test_index].image_id
-            annotations.loc[
-                [i for j in imid_indexes[im_id].values.tolist() for i in j], 
-                'split'] = 'val'"""
+        # Assign split values to annotations
+        self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), 'split'] = 'train'
+        self.annotations.loc[sum([imid_indexes[im] for im in val_ids], []), 'split'] = 'val'
+        self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), 'split'] = 'test'
 
     def _scale_bounding_boxes(self):
         """Scales annotations' bounding boxes to target dimensions"""
         for col in ['xmin', 'xmax']:
             self.annotations[col] *= self.target_width / self.annotations.width
         for col in ['ymin', 'ymax']:
-            self.annotations[col] *= self.target_height / \
-                self.annotations.height
+            self.annotations[col] *= self.target_height / self.annotations.height
+        self.annotations.loc[:, 'width'] = self.target_width
+        self.annotations.loc[:, 'height'] = self.target_height
 
     def _fix_invalid_boxes(self):
         """Clips box coordinates between 0 and width (x-coordinates) or height (y-coordinates)"""

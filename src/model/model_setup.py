@@ -37,14 +37,9 @@ class DatasetOrganizer:
     def move_files(self):
         for im_id, rows in self.annotations.groupby('image_id'):
             first = rows.head(1)
-            split_folder = self._determine_split_folder(first)
+            split_folder = first.split.item()
             self._move_image(first, im_id, split_folder)
             self._move_label(im_id, split_folder)
-
-    def _determine_split_folder(self, first):
-        if first.split.item() == "train":
-            return "train"
-        return "val" if first.finding_categories.item() == 0 else "val_neg"
 
     def _move_image(self, first, im_id, split_folder):
         img_dest_path = os.path.join(
@@ -63,11 +58,12 @@ class DatasetOrganizer:
 class YOLOConfigGenerator:
     """Generates YAML config file for YOLO model"""
 
-    def __init__(self, yaml_path, train_path, val_path, num_classes, class_names):
+    def __init__(self, yaml_path, train_path, val_path, test_path, num_classes, class_names):
         self.yaml_path = yaml_path
         self.config = {
             "train": train_path,
             "val": val_path,
+            "test": test_path,
             "nc": num_classes,
             "names": class_names,
         }
@@ -98,7 +94,7 @@ def run_model_setup():
     yolo_dataset_path = config.yolo_dataset_path
     yaml_path = config.yolo_config_path
     expected_folders = ["images/train", "images/val",
-                        "images/val_neg", "labels/train", "labels/val"]
+                        "images/test", "labels/train", "labels/val", "labels/test"]
 
     # Generate labels
     yolo_label_gen = YOLOLabelGenerator(annotations_file, yolo_labels_path)
@@ -110,8 +106,9 @@ def run_model_setup():
     # Make YOLO model config file
     yolo_config = YOLOConfigGenerator(
         yaml_path, 
-        f"{yolo_dataset_path}/images/train", 
-        f"{yolo_dataset_path}/images/val", 
+        "dataset/images/train", 
+        "dataset/images/val", 
+        "dataset/images/test", 
         1, 
         ["0"],
     )
