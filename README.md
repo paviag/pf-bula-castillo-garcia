@@ -47,7 +47,7 @@ De esta base, hemos extraído 1,659 casos específicos:
    - Conversión de DICOM a PNG
    - Estandarización: MONOCHROME1 (fondo blanco) a MONOCHROME2 (fondo negro)
    - Mejora de contraste: VOI LUT y filtro CLAHE
-   - Redimensionamiento a 640x640 píxeles para compatibilidad con YOLO
+   - Redimensionamiento a 640x640 píxeles para mayor compatibilidad con YOLO
 
 ### Aumento de Datos
 - Generación de tres versiones aumentadas por imagen:
@@ -93,7 +93,7 @@ imgsz=640,
 device=0,   # Use GPU 0
 workers=1,
 save_period=10, # Save every 10 epochs
-patience=30, # Early stopping if there is no improvement
+patience=60, # Early stopping if there is no improvement
 ```
 (Código de `src/model/run_model`)
 
@@ -126,10 +126,6 @@ patience=30, # Early stopping if there is no improvement
 - **Verdaderos Negativos (VN)**: Imágenes normales correctamente identificadas como normales.
 - **Falsos Negativos (FN)**: Anomalías no detectadas por el modelo.
 - **Falsos Positivos (FP)**: Detecciones incorrectas de anomalías en imágenes normales.
-
-## Resultados
-
-`TODO`
 
 ## Ejecución del Sistema
 
