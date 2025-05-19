@@ -20,7 +20,11 @@ def ensemble_predict_wbf(models, image_files, iou_threshold=0.5, confidence_thre
         all_classes = []
         
         for model in models:
-            results = model.predict(img_path, conf=confidence_threshold, verbose=False)[0]
+            # Clear GPU cache
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
+            results = model.predict(img_path, conf=confidence_threshold, verbose=False, stream=True)[0]
             
             if len(results.boxes) > 0:
                 # Extract boxes, scores and classes
