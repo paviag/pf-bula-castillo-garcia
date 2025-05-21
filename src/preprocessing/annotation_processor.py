@@ -66,15 +66,40 @@ class ProcessedAnnotation:
 
         return self.annotations
 
+    def _add_stratify_label(self, unique_images, relevant_columns):
+        """Adds stratify label to df with relevant columns"""
+        # Create a stratification label by combining all relevant columns
+        unique_images['stratify_label'] = unique_images.apply(lambda row: '_'.join(map(str, row[relevant_columns])), axis=1)
+        # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
+        label_counts = unique_images['stratify_label'].value_counts()
+        rare_labels = label_counts[label_counts < 2].index
+        if len(rare_labels) == 1:
+            # Replace rare labels with the second most common label
+            unique_images[unique_images['stratify_label'] == rare_labels[0]]['stratify_label'] = label_counts.index[-2]
+        else:
+            # Replace rare labels with 'Rare'
+            unique_images['stratify_label'] = unique_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+        return unique_images
+
     def _set_splits(self, num_groups):
         """Returns annotations with set train, val, test splits for stratified 75/15/15 split"""
-
         # Create a stratification label by combining all relevant columns
         relevant_columns = ['laterality', 'view_position', 'breast_density', 'finding_categories']
 
         # Create mapping of image_id to annotation indices
         imid_indexes = {im_id: self.annotations[self.annotations.image_id == im_id].index.tolist()
                         for im_id in self.annotations.image_id.unique()}
+
+        # Get unique image IDs with finding categories
+        unique_images = self.annotations.drop(columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
+        unique_images = self._add_stratify_label(unique_images, relevant_columns)
+        
+        # Split the data into test and temp sets (15% test, 85% temp)
+        test_images, temp_images = train_test_split(unique_images, test_size=0..85, stratify=unique_images['stratify_label'], random_state=0)
+
+        # Assign split values to annotations
+        self.annotations.loc[sum([imid_indexes[im] for im in test_images['image_id'].tolist()], []), [f'group_{i}', 'split']] = 'test'
+        self.annotations.loc[sum([imid_indexes[im] for im in temp_images['image_id'].tolist()], []), [f'group_{i}', 'split']] = 'group'
         
         for i in range(num_groups):
             # Create a mask for the current group
@@ -82,47 +107,16 @@ class ProcessedAnnotation:
             
             # Get unique image IDs with finding categories
             annot_group = annot_group.drop(columns=[f'group_{j}' for j in range(num_groups) if f'group_{j}' in annot_group.columns])
+            annot_group = annot_group[annot_group['split'] == 'group']
             unique_images = annot_group.drop(columns=['xmin', 'ymin', 'xmax', 'ymax']).drop_duplicates(subset=['image_id'])
-            
-            # Create a stratification label by combining all relevant columns
-            unique_images['stratify_label'] = unique_images.apply(lambda row: '_'.join(map(str, row[relevant_columns])), axis=1)
-            # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
-            label_counts = unique_images['stratify_label'].value_counts()
-            rare_labels = label_counts[label_counts < 2].index
-            if len(rare_labels) == 1:
-                # Replace rare labels with the second most common label
-                unique_images[unique_images['stratify_label'] == rare_labels[0]]['stratify_label'] = label_counts.index[-2]
-            else:
-                # Replace rare labels with 'Rare'
-                unique_images['stratify_label'] = unique_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
+            unique_images = self._add_stratify_label(unique_images, relevant_columns)
            
-            # Split the data into train and temp sets (70% train, 30% temp)
-            train_images, temp_images = train_test_split(unique_images, test_size=0.3, stratify=unique_images['stratify_label'], random_state=0)
+            # Split the data into train and temp sets (80% train, 20% val)
+            train_images, val_images = train_test_split(unique_images, test_size=0.2, stratify=unique_images['stratify_label'], random_state=0)
             
-            # Identify rare labels (those with fewer than 2 instances) and replace them with 'Rare'
-            label_counts = temp_images['stratify_label'].value_counts()
-            rare_labels = label_counts[label_counts < 2].index
-            print(f"Rare labels in group {i}: {rare_labels}")
-            print(label_counts[-10:])
-            if len(rare_labels) == 1:
-                # Replace rare labels with the second most common label
-                temp_images[unique_images['stratify_label'] == rare_labels[0]]['stratify_label'] = label_counts.index[-2]
-            else:
-                # Replace rare labels with 'Rare'
-                temp_images['stratify_label'] = temp_images['stratify_label'].apply(lambda x: 'Rare' if x in rare_labels else x)
-            
-            # Split the temp set into validation and test sets
-            val_images, test_images = train_test_split(temp_images, test_size=0.5, stratify=temp_images['stratify_label'], random_state=0)
-            
-            # Convert image IDs to lists
-            train_ids = train_images['image_id'].tolist()
-            val_ids = val_images['image_id'].tolist()
-            test_ids = test_images['image_id'].tolist()
-
             # Assign split values to annotations
-            self.annotations.loc[sum([imid_indexes[im] for im in train_ids], []), [f'group_{i}', 'split']] = 'train'  
-            self.annotations.loc[sum([imid_indexes[im] for im in val_ids], []), [f'group_{i}', 'split']] = 'val'
-            self.annotations.loc[sum([imid_indexes[im] for im in test_ids], []), [f'group_{i}', 'split']] = 'test'
+            self.annotations.loc[sum([imid_indexes[im] for im in train_images['image_id'].tolist()], []), f'group_{i}'] = 'train'  
+            self.annotations.loc[sum([imid_indexes[im] for im in val_images['image_id'].tolist()], []), f'group_{i}'] = 'val'
         
     def _scale_bounding_boxes(self):
         """Scales annotations' bounding boxes to target dimensions"""
