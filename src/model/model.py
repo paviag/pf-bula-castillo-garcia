@@ -4,7 +4,7 @@ import torch
 from extra.utils import get_best_iteration
 
 
-def run_model(group, best_trials_path=config.best_trials_path, epochs=128):
+def run_model(group, best_trials_path=config.best_trials_path, epochs=110):
     print("CUDA is available:", torch.cuda.is_available())  # Debe imprimir True si CUDA está disponible
     print("Number of GPUs:",torch.cuda.device_count())  # Número de GPUs detectadas
     print("CUDA PyTorch-supported version:",torch.version.cuda)  # Versión de CUDA soportada por PyTorch
@@ -15,7 +15,7 @@ def run_model(group, best_trials_path=config.best_trials_path, epochs=128):
     device = torch.device("cpu")
 
     # Create model from YOLOv8
-    model = YOLO("yolov8s.pt")
+    model = YOLO("yolov8l.pt")
     model.to(device)    # Link to device
 
     # Get best hyperparameters

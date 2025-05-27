@@ -94,7 +94,7 @@ class FolderValidator:
                 f"{full_path}: {'✅ Exists' if os.path.exists(full_path) else '❌ Does not exist'}")
 
 
-def run_model_setup(num_groups=3):
+def run_model_setup(num_groups):
     annotations_file = pd.read_csv(f"{config.output_data_path}/annotations.csv")
     yolo_labels_path = config.yolo_labels_path
     yolo_dataset_path = config.yolo_dataset_path
@@ -116,7 +116,7 @@ def run_model_setup(num_groups=3):
             yaml_path.replace(".yaml", f"_{i}.yaml"), 
             f"dataset/images/train_{i}", 
             f"dataset/images/val_{i}", 
-            f"dataset/images/test", 
+            "dataset/images/test", 
             1, 
             ["0"],
         )

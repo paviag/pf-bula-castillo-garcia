@@ -4,7 +4,7 @@ from preprocessing.image_handler import ImageDatasetHandler
 from config import config
 
 
-def run_preprocessing(num_groups=3):
+def run_preprocessing(num_groups):
     dicom_zip = config.dicom_zip
     annotations_path = f"{config.input_data_path}/finding_annotations.csv"
     metadata_path = f"{config.input_data_path}/metadata.csv"
@@ -27,8 +27,8 @@ def run_preprocessing(num_groups=3):
         # Resizes image
         resized_image = image_handler.resize(image)
         # Saves image
-        img_path = image_handler.save_image(
-            resized_image, first.study_id, im_id)
+        img_path = image_handler.save_image(resized_image, first.study_id, 
+                                            im_id)
         # Modifies directory path to newly processed image
         annotations.loc[annotations.image_id ==
                         im_id, 'directory_path'] = img_path

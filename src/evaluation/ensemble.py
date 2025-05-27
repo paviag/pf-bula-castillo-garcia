@@ -1,5 +1,6 @@
 import numpy as np
 from ensemble_boxes import weighted_boxes_fusion
+import torch
 
 def ensemble_predict_wbf(models, image_files, iou_threshold=0.5, confidence_threshold=0.25, skip_box_thr=0.0001):
     """
@@ -24,14 +25,13 @@ def ensemble_predict_wbf(models, image_files, iou_threshold=0.5, confidence_thre
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 
-            results = model.predict(img_path, conf=confidence_threshold, verbose=False, stream=True)[0]
-            
-            if len(results.boxes) > 0:
-                # Extract boxes, scores and classes
-                # (boxes in relative xyxy format)
-                all_boxes.append(results.boxes.xyxy.cpu().numpy() / np.array([results.orig_shape[1], results.orig_shape[0], results.orig_shape[1], results.orig_shape[0]]))
-                all_scores.append(results.boxes.conf.cpu().numpy())
-                all_classes.append(results.boxes.cls.cpu().numpy())
+            for r in model.predict([img_path], conf=confidence_threshold, verbose=False, stream=True):
+                if len(r.boxes) > 0:
+                    # Extract boxes, scores and classes
+                    # (boxes in relative xyxy format)
+                    all_boxes.append(r.boxes.xyxy.cpu().numpy() / np.array([r.orig_shape[1], r.orig_shape[0], r.orig_shape[1], r.orig_shape[0]]))
+                    all_scores.append(r.boxes.conf.cpu().numpy())
+                    all_classes.append(r.boxes.cls.cpu().numpy())
         
         # If no detections from any model
         if sum(len(b) for b in all_boxes) == 0:
