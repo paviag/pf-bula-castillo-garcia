@@ -15,7 +15,7 @@ def run_preprocessing():
     # default target size 640x640
     image_handler = ImageDatasetHandler(
         dicom_zip, metadata_path, output_image_dir)
-    # default test size 0.2 and target size 640x640
+    # default target size 640x640, train/val/test split 80/10/10, proportioned 85pos/15/neg
     annotations = ProcessedAnnotation(annotations_path).annotations
 
     for im_id, rows in annotations.groupby('image_id'):
